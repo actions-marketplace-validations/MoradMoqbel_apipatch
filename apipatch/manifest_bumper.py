@@ -21,6 +21,8 @@ MODERN_VERSION_TARGETS: Dict[str, str] = {
     "langchain": ">=0.2.0",
     "langchain-core": ">=0.2.0",
     "langchain-openai": ">=0.1.0",
+    "langchain-anthropic": ">=0.1.0",
+    "langchain-google-genai": ">=0.0.9",
     "langchain-community": ">=0.2.0",
     "stripe": ">=10.0.0",
     "supabase": ">=2.0.0",
@@ -34,6 +36,13 @@ MODERN_VERSION_TARGETS: Dict[str, str] = {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "axios": "^1.6.0"
+}
+
+# Packages that replace or succeed older legacy packages during modernization
+SUCCESSOR_PACKAGES: Dict[str, str] = {
+    "google-generativeai": "google-genai",
+    "google_generativeai": "google-genai",
+    "google.generativeai": "google-genai",
 }
 
 
@@ -87,21 +96,30 @@ class ManifestBumper:
         return True  # Default: allow update if we can't parse
 
     @classmethod
-    def bump_requirements_txt(cls, content: str, modernized_libraries: Set[str]) -> Tuple[str, bool]:
+    def bump_requirements_txt(
+        cls,
+        content: str,
+        modernized_libraries: Set[str],
+        auto_add_missing: bool = True
+    ) -> Tuple[str, bool]:
         """
         Updates version requirements in requirements.txt content for modernized libraries.
+        Automatically replaces predecessor packages with their modern successors (e.g. google-generativeai -> google-genai)
+        and appends missing dependencies to prevent fresh-install ImportErrors.
         Returns (new_content, changed).
         """
-        if not content or not modernized_libraries:
+        if not content or not content.strip() or not modernized_libraries:
             return content, False
 
         lines = content.splitlines(keepends=True)
         new_lines: List[str] = []
         changed = False
+        seen_packages: Set[str] = set()
 
         normalized_libs = {lib.strip().lower() for lib in modernized_libraries if lib}
         normalized_libs.update({lib.replace("_", "-") for lib in normalized_libs})
         normalized_libs.update({lib.replace("-", "_") for lib in normalized_libs})
+        normalized_libs.update({lib.replace(".", "-") for lib in normalized_libs})
 
         for line in lines:
             stripped = line.strip()
@@ -113,13 +131,29 @@ class ManifestBumper:
             parts = re.split(r"([><\=~;!@\[].*)", stripped, maxsplit=1)
             pkg_name = parts[0].strip()
             pkg_lower = pkg_name.lower()
+            pkg_norm = pkg_lower.replace("_", "-")
+            seen_packages.add(pkg_lower)
+            seen_packages.add(pkg_norm)
 
-            if pkg_lower in normalized_libs or pkg_lower.replace("_", "-") in normalized_libs or pkg_lower.replace("-", "_") in normalized_libs:
-                target_ver = cls.get_target_constraint(pkg_lower)
+            # ── 1. Successor Replacement Guard (e.g. google-generativeai -> google-genai) ──
+            successor = SUCCESSOR_PACKAGES.get(pkg_norm) or SUCCESSOR_PACKAGES.get(pkg_lower)
+            if successor and (pkg_norm in normalized_libs or successor in normalized_libs or successor.replace("-", "_") in normalized_libs):
+                target_ver = cls.get_target_constraint(successor)
+                if target_ver:
+                    ending = "\n" if line.endswith("\n") else ""
+                    new_lines.append(f"{successor}{target_ver}{ending}")
+                    seen_packages.add(successor)
+                    seen_packages.add(successor.replace("-", "_"))
+                    changed = True
+                    continue
+
+            # ── 2. Standard Modernization Version Bump ──
+            if pkg_lower in normalized_libs or pkg_norm in normalized_libs or pkg_lower.replace("-", "_") in normalized_libs:
+                target_ver = cls.get_target_constraint(pkg_lower) or cls.get_target_constraint(pkg_norm)
                 if target_ver:
                     existing_constraint = parts[1].strip() if len(parts) > 1 else ""
 
-                    # ── Anti-Regression Guard: never loosen a modern pinned version ──
+                    # Anti-Regression Guard: never loosen a modern pinned version
                     if existing_constraint and not cls._should_update_version(existing_constraint, target_ver):
                         new_lines.append(line)
                         continue
@@ -132,6 +166,22 @@ class ManifestBumper:
                         continue
 
             new_lines.append(line)
+
+        # ── 3. Auto-Append Missing Required Modern Dependencies ──
+        if auto_add_missing and normalized_libs:
+            for lib in sorted(normalized_libs):
+                canonical = SUCCESSOR_PACKAGES.get(lib, lib.replace("_", "-").replace(".", "-"))
+                if canonical in seen_packages or canonical.replace("-", "_") in seen_packages:
+                    continue
+
+                target_ver = cls.get_target_constraint(canonical)
+                if target_ver:
+                    if new_lines and not new_lines[-1].endswith("\n"):
+                        new_lines[-1] += "\n"
+                    new_lines.append(f"{canonical}{target_ver}\n")
+                    seen_packages.add(canonical)
+                    seen_packages.add(canonical.replace("-", "_"))
+                    changed = True
 
         return "".join(new_lines), changed
 
@@ -184,8 +234,30 @@ class ManifestBumper:
 
         normalized_libs = {lib.strip().lower() for lib in modernized_libraries if lib}
         normalized_libs.update({lib.replace("_", "-") for lib in normalized_libs})
+        normalized_libs.update({lib.replace(".", "-") for lib in normalized_libs})
+        normalized_libs.update({lib.replace("-", "_") for lib in normalized_libs})
 
         for line in lines:
+            # 1. Successor replacement (e.g. google-generativeai -> google-genai)
+            successor_matched = False
+            for pred, succ in SUCCESSOR_PACKAGES.items():
+                if pred in normalized_libs or succ in normalized_libs or succ.replace("-", "_") in normalized_libs:
+                    succ_ver = cls.get_target_constraint(succ)
+                    if succ_ver:
+                        pattern = re.compile(rf'("|\'){re.escape(pred)}([><=~;!@\[].*?)?("|\')', re.IGNORECASE)
+                        if pattern.search(line):
+                            quote = pattern.search(line).group(1)
+                            replacement = f"{quote}{succ}{succ_ver}{quote}"
+                            new_line = pattern.sub(replacement, line)
+                            if new_line != line:
+                                line = new_line
+                                changed = True
+                                successor_matched = True
+                                break
+            if successor_matched:
+                new_lines.append(line)
+                continue
+
             for lib in normalized_libs:
                 target_ver = cls.get_target_constraint(lib)
                 if not target_ver:

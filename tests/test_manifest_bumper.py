@@ -73,3 +73,39 @@ def test_sync_local_manifests_monorepo_nested(tmp_path):
     assert "openai>=1.0.0" in req_a.read_text(encoding="utf-8")
     assert "^2.0.0" in pkg_b.read_text(encoding="utf-8")
 
+
+def test_successor_package_replacement():
+    # google-generativeai should be cleanly migrated to google-genai
+    old_content = "requests>=2.28.0\ngoogle-generativeai==0.3.0\nfastapi>=0.100.0\n"
+    new_content, changed = ManifestBumper.bump_requirements_txt(old_content, {"google.generativeai", "google-genai"})
+    assert changed is True
+    assert "google-genai>=0.1.0" in new_content
+    assert "google-generativeai" not in new_content
+    assert "requests>=2.28.0" in new_content
+
+
+def test_append_missing_modern_package():
+    # If a subproject uses google-genai or langchain-anthropic but it's not in requirements.txt, auto-append it
+    old_content = "requests>=2.28.0\npytest>=8.0.0\n"
+    new_content, changed = ManifestBumper.bump_requirements_txt(old_content, {"google-genai", "langchain-anthropic"})
+    assert changed is True
+    assert "google-genai>=0.1.0" in new_content
+    assert "langchain-anthropic>=0.1.0" in new_content
+    assert "requests>=2.28.0" in new_content
+
+
+def test_bump_pyproject_toml_successor():
+    old_content = """\
+[project]
+name = "demo"
+dependencies = [
+    "google-generativeai<=0.3.0",
+    "requests>=2.25.0"
+]
+"""
+    new_content, changed = ManifestBumper.bump_pyproject_toml(old_content, {"google.generativeai"})
+    assert changed is True
+    assert '"google-genai>=0.1.0"' in new_content
+    assert "google-generativeai" not in new_content
+
+

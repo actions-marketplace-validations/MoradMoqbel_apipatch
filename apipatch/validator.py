@@ -242,6 +242,64 @@ class CodeValidator:
         return ValidationResult(is_valid=True)
 
     @staticmethod
+    def validate_decorator_definition_order(code: str) -> ValidationResult:
+        """
+        Ensures that any variable used in a top-level decorator (e.g. '@app.get', '@router.post', '@server.route')
+        is defined (assigned, instantiated, or imported) before the first decorator reference in the module.
+        Prevents runtime/import-time NameError (e.g., 'NameError: name 'app' is not defined').
+        """
+        try:
+            tree = ast.parse(code)
+            defined_top_level: Set[str] = set()
+            standard_builtins = {
+                "property", "staticmethod", "classmethod", "override",
+                "abstractmethod", "final", "dataclass"
+            }
+
+            for stmt in tree.body:
+                # 1. Track symbols defined at the module top level
+                if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+                    for alias in stmt.names:
+                        defined_top_level.add(alias.asname or alias.name.split(".")[0])
+                elif isinstance(stmt, ast.Assign):
+                    for target in stmt.targets:
+                        if isinstance(target, ast.Name):
+                            defined_top_level.add(target.id)
+                        elif isinstance(target, (ast.Tuple, ast.List)):
+                            for elt in target.elts:
+                                if isinstance(elt, ast.Name):
+                                    defined_top_level.add(elt.id)
+                elif isinstance(stmt, ast.AnnAssign):
+                    if isinstance(stmt.target, ast.Name):
+                        defined_top_level.add(stmt.target.id)
+                elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    # Check decorators on this definition
+                    for dec in stmt.decorator_list:
+                        dec_base = dec
+                        while isinstance(dec_base, (ast.Call, ast.Attribute)):
+                            if isinstance(dec_base, ast.Call):
+                                dec_base = dec_base.func
+                            elif isinstance(dec_base, ast.Attribute):
+                                dec_base = dec_base.value
+                        if isinstance(dec_base, ast.Name):
+                            var_name = dec_base.id
+                            if var_name not in standard_builtins and var_name not in dir(__builtins__) and var_name not in defined_top_level:
+                                return ValidationResult(
+                                    is_valid=False,
+                                    error_message=(
+                                        f"Decorator '@{var_name}...' on line {stmt.lineno} references variable '{var_name}' "
+                                        f"before it is defined. In Python, '{var_name}' must be instantiated (e.g. '{var_name} = FastAPI(...)') "
+                                        f"at the top level BEFORE any route decorator to prevent import-time NameError."
+                                    ),
+                                    error_line=stmt.lineno
+                                )
+                    # Add function/class name itself as defined
+                    defined_top_level.add(stmt.name)
+        except Exception:
+            pass
+        return ValidationResult(is_valid=True)
+
+    @staticmethod
     def extract_imported_modules(code: str) -> Set[str]:
         """Extracts all imported module namespaces (e.g. 'google.adk.agents', 'os', 'openai') from Python code."""
         modules = set()
@@ -828,9 +886,20 @@ class CodeValidator:
 
         return ValidationResult(is_valid=True)
 
+    @staticmethod
+    def strip_code_fences(code: str) -> str:
+        """Strips accidental markdown code fences (```python ... ``` or ``` ...) from source code."""
+        if not code or not isinstance(code, str):
+            return code
+        cleaned = code.strip()
+        cleaned = re.sub(r"^```[a-zA-Z0-9_+-]*\s*\r?\n?", "", cleaned)
+        cleaned = re.sub(r"\r?\n?```\s*$", "", cleaned)
+        return cleaned.strip()
+
     @classmethod
     def validate(cls, original_code: str, refactored_code: str, file_extension: str = ".py") -> ValidationResult:
         """Runs comprehensive multi-layer validation on refactored code."""
+        refactored_code = cls.strip_code_fences(refactored_code)
         if file_extension in {".py", ".pyw"}:
             syntax_check = cls.validate_python_syntax(refactored_code)
             if not syntax_check.is_valid:
@@ -843,6 +912,10 @@ class CodeValidator:
             logic_check = cls.validate_business_logic_preservation(original_code, refactored_code)
             if not logic_check.is_valid:
                 return logic_check
+
+            decorator_check = cls.validate_decorator_definition_order(refactored_code)
+            if not decorator_check.is_valid:
+                return decorator_check
 
             format_check = cls.validate_string_formatting_integrity(refactored_code)
             if not format_check.is_valid:

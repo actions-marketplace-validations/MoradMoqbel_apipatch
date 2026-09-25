@@ -123,9 +123,22 @@ class TestGitHubClient(unittest.TestCase):
             }]
         }]
         md = GitHubClient.generate_pr_markdown("owner/repo", audit_results)
-        self.assertIn("Migrate deprecated stripe API calls", md["title"])
+        self.assertIn("migrate deprecated stripe api calls", md["title"].lower())
         self.assertIn("services/payments.py", md["body"])
         self.assertIn("stripe.PaymentIntent.create()", md["body"])
+
+    def test_parse_pr_target(self):
+        repo, pr = GitHubClient.parse_pr_target("https://github.com/KarlTDebiec/Scinoephile/pull/1326")
+        self.assertEqual(repo, "KarlTDebiec/Scinoephile")
+        self.assertEqual(pr, 1326)
+
+        repo2, pr2 = GitHubClient.parse_pr_target("KarlTDebiec/Scinoephile#42")
+        self.assertEqual(repo2, "KarlTDebiec/Scinoephile")
+        self.assertEqual(pr2, 42)
+
+        repo3, pr3 = GitHubClient.parse_pr_target("romanvm/python-web-pdb")
+        self.assertEqual(repo3, "romanvm/python-web-pdb")
+        self.assertIsNone(pr3)
 
 
 if __name__ == "__main__":

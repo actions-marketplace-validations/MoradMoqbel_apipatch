@@ -75,28 +75,117 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Waitlist Form Submission
+  // 4. Waitlist Form Submission (Connected to moradyunes2@gmail.com)
   const form = document.getElementById('waitlist-form');
   const emailInput = document.getElementById('email-input');
   const feedback = document.getElementById('form-feedback');
 
   if (form && emailInput && feedback) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
-      if (email) {
-        try {
-          const waitlist = JSON.parse(localStorage.getItem('apipatch_waitlist') || '[]');
-          waitlist.push({ email, timestamp: new Date().toISOString() });
-          localStorage.setItem('apipatch_waitlist', JSON.stringify(waitlist));
-        } catch (_) {}
+      if (!email) return;
 
-        feedback.textContent = `✓ Thanks! ${email} has been reserved for the GitHub App beta.`;
-        emailInput.value = '';
-        setTimeout(() => {
-          feedback.textContent = '';
-        }, 7000);
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Joining...';
       }
+
+      try {
+        const waitlist = JSON.parse(localStorage.getItem('apipatch_waitlist') || '[]');
+        waitlist.push({ email, timestamp: new Date().toISOString() });
+        localStorage.setItem('apipatch_waitlist', JSON.stringify(waitlist));
+      } catch (_) {}
+
+      try {
+        await fetch('https://formsubmit.co/ajax/moradyunes2@gmail.com', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            form_type: 'GitHub App Beta Waitlist',
+            work_email: email,
+            _subject: `✨ New ApiPatch Waitlist Signup: ${email}`,
+            _captcha: 'false'
+          })
+        });
+      } catch (err) {
+        console.warn('FormSubmit background notification fallback', err);
+      }
+
+      feedback.textContent = `✓ Thanks! ${email} has been reserved for the GitHub App beta.`;
+      emailInput.value = '';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Join GitHub App Beta';
+      }
+      setTimeout(() => {
+        feedback.textContent = '';
+      }, 7000);
+    });
+  }
+
+  // 4b. Private Pilot Form Submission (Connected to moradyunes2@gmail.com)
+  const pilotForm = document.getElementById('pilot-form');
+  const pilotFeedback = document.getElementById('pilot-feedback');
+
+  if (pilotForm && pilotFeedback) {
+    pilotForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('pilot-name')?.value.trim() || '';
+      const email = document.getElementById('pilot-email')?.value.trim() || '';
+      const company = document.getElementById('pilot-company')?.value.trim() || '';
+      const stack = document.getElementById('pilot-stack')?.value.trim() || '';
+      const notes = document.getElementById('pilot-notes')?.value.trim() || '';
+
+      if (!email || !company) return;
+
+      const pilotSubmitBtn = pilotForm.querySelector('button[type="submit"]');
+      if (pilotSubmitBtn) {
+        pilotSubmitBtn.disabled = true;
+        pilotSubmitBtn.textContent = 'Sending Request... ⚡';
+      }
+
+      try {
+        const pilots = JSON.parse(localStorage.getItem('apipatch_pilots') || '[]');
+        pilots.push({ name, email, company, stack, notes, timestamp: new Date().toISOString() });
+        localStorage.setItem('apipatch_pilots', JSON.stringify(pilots));
+      } catch (_) {}
+
+      try {
+        await fetch('https://formsubmit.co/ajax/moradyunes2@gmail.com', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            form_type: 'Private Pilot Intake Program',
+            founder_or_lead: name,
+            work_email: email,
+            company_or_org: company,
+            tech_stack_and_size: stack,
+            dependency_bottleneck: notes || 'None specified',
+            _subject: `🚀 New ApiPatch Private Pilot Request from ${company} (${name})`,
+            _captcha: 'false'
+          })
+        });
+      } catch (err) {
+        console.warn('FormSubmit background notification fallback', err);
+      }
+
+      pilotFeedback.textContent = `✓ Thank you, ${name || 'there'}! We received your pilot request for ${company}. We will reach out within 24 hours.`;
+      pilotForm.reset();
+      if (pilotSubmitBtn) {
+        pilotSubmitBtn.disabled = false;
+        pilotSubmitBtn.textContent = 'Request Monorepo Pilot Access →';
+      }
+      setTimeout(() => {
+        pilotFeedback.textContent = '';
+      }, 8000);
     });
   }
 

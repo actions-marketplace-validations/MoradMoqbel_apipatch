@@ -460,7 +460,42 @@ class GitHubClient:
                     return pr
         return None
 
+    def get_pull_request(self, repo_full_name: str, pr_number: int) -> Optional[Dict[str, Any]]:
+        """Fetches metadata for a specific Pull Request."""
+        clean_name = self.normalize_repo_name(repo_full_name)
+        data = self._request(f"/repos/{clean_name}/pulls/{pr_number}")
+        if isinstance(data, dict) and "id" in data:
+            return data
+        return None
+
+    def get_pull_request_files(self, repo_full_name: str, pr_number: int) -> List[Dict[str, Any]]:
+        """Fetches the list of modified files in a specific Pull Request."""
+        clean_name = self.normalize_repo_name(repo_full_name)
+        data = self._request(f"/repos/{clean_name}/pulls/{pr_number}/files?per_page=100")
+        if isinstance(data, list):
+            return data
+        return []
+
     # ── Helpers ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def parse_pr_target(raw: str) -> Tuple[str, Optional[int]]:
+        """
+        Parses a target string (e.g. repo name or PR URL) and extracts (repo_name, pr_number).
+        Examples:
+          'https://github.com/KarlTDebiec/Scinoephile/pull/1326' -> ('KarlTDebiec/Scinoephile', 1326)
+          'KarlTDebiec/Scinoephile#1326' -> ('KarlTDebiec/Scinoephile', 1326)
+          'KarlTDebiec/Scinoephile' -> ('KarlTDebiec/Scinoephile', None)
+        """
+        import re
+        clean_raw = raw.strip()
+        m_url = re.search(r"github\.com/([^/]+/[^/]+)/pull/(\d+)", clean_raw)
+        if m_url:
+            return m_url.group(1), int(m_url.group(2))
+        m_hash = re.search(r"^([^/]+/[^/#]+)#(\d+)$", clean_raw)
+        if m_hash:
+            return m_hash.group(1), int(m_hash.group(2))
+        return GitHubClient.normalize_repo_name(clean_raw), None
 
     @staticmethod
     def normalize_repo_name(raw: str) -> str:
@@ -479,7 +514,7 @@ class GitHubClient:
 
         parts = [p for p in raw.split("/") if p]
         if len(parts) >= 2:
-            return f"{parts[-2]}/{parts[-1]}"
+            return f"{parts[0]}/{parts[1]}"
         return raw
 
     @staticmethod
@@ -502,7 +537,9 @@ class GitHubClient:
         libs_str = ", ".join(libs) if libs else "Third-Party"
 
         prefix = scope_prefix or ""
-        default_title = f"{prefix}[ApiPatch] Migrate deprecated {libs_str} API calls ({total_files} file{'s' if total_files > 1 else ''})"
+        scope_clean = prefix.strip("[] ").lower().replace("/", "-").replace(" ", "-") if prefix else ""
+        scope_tag = f"({scope_clean})" if scope_clean else ""
+        default_title = f"refactor{scope_tag}: migrate deprecated {libs_str} API calls ({total_files} file{'s' if total_files > 1 else ''})"
         title = custom_title or default_title
 
         body_lines = [

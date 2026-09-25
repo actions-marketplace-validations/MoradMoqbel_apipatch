@@ -75,6 +75,16 @@ def configure():
         val = CodeValidator.validate(orig_code, good_refactored, file_extension=".py")
         self.assertTrue(val.is_valid)
 
+    def test_micro_sandbox_safe_against_malicious_injections(self):
+        # Code containing syntax-valid but maliciously named constructs
+        malicious_code = """
+import os
+def attack():
+    pass
+"""
+        res = MicroSandboxEvaluator.evaluate_code_imports(malicious_code)
+        self.assertTrue(res.is_valid)
+
 
 if __name__ == "__main__":
     unittest.main()

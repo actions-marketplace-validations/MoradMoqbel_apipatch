@@ -15,19 +15,37 @@ MIGRATION_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
         "aliases": ["google", "google-genai", "google.genai", "google-generativeai", "gemini", "generativelanguage"],
         "description": "Google GenAI SDK (google.genai) and Gemini 3 / Nano Banana Image Generation",
         "guidance": """\
-• Google GenAI Migration Guidelines (Latest Official 2025/2026 SDK):
-  - Package: 'google-genai' (Import: 'from google import genai', 'from google.genai import types')
-  - Initialization: client = genai.Client(api_key=...)
-  - Synchronous Calls:
-      response = client.models.generate_content(
-          model="gemini-2.5-flash",
-          contents=["..."]
-      )
-  - Asynchronous Calls (inside `async def` with `await`):
-      response = await client.aio.models.generate_content(
-          model="gemini-2.5-flash",
-          contents=["..."]
-      )
+• Google GenAI Migration Guidelines (Legacy google-generativeai → Modern google-genai):
+  - Deprecated SDK: 'google-generativeai' is deprecated. Migrate to official 'google-genai' SDK.
+  - Import Migration:
+      OLD: import google.generativeai as genai
+      NEW: from google import genai
+           from google.genai import types
+  - Initialization Migration:
+      OLD: genai.configure(api_key=...)
+      NEW: client = genai.Client(api_key=...)
+  - Generation Migration:
+      OLD: model = genai.GenerativeModel('gemini-1.5-pro')
+           response = model.generate_content(prompt_or_contents)
+      NEW: response = client.models.generate_content(
+               model='gemini-1.5-pro',
+               contents=prompt_or_contents
+           )
+  - Asynchronous Generation:
+      NEW: response = await client.aio.models.generate_content(model='...', contents=...)
+  - File API Migration:
+      OLD: video_file = genai.upload_file(path=video_path, display_name=...)
+           video_file = genai.get_file(video_file.name)
+           genai.delete_file(video_file.name)
+      NEW: video_file = client.files.upload(file=video_path, config=dict(display_name=...))
+           video_file = client.files.get(name=video_file.name)
+           client.files.delete(name=video_file.name)
+  - Model Listing:
+      OLD: genai.list_models()
+      NEW: client.models.list()
+  - Embeddings:
+      OLD: genai.embed_content(model=..., content=...)
+      NEW: client.models.embed_content(model=..., contents=...)
   - Image Generation & Editing (Nano Banana / Gemini 3 Image):
       Official Models: 'gemini-3.1-flash-image', 'gemini-3-pro-image', 'gemini-3.1-flash-lite-image', 'gemini-2.5-flash-image'
       Usage:
@@ -64,59 +82,90 @@ MIGRATION_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
     },
 
     "langchain": {
-        "aliases": ["langchain", "langchain-core", "langchain-community", "langchain-openai"],
-        "description": "LangChain v0.2 / v0.3+ and LCEL Migration",
+        "aliases": ["langchain", "langchain-core", "langchain-community", "langchain-openai", "langchain-anthropic", "langgraph"],
+        "description": "LangChain v0.2 / v0.3+ and LangGraph LCEL Modernization",
         "guidance": """\
-• LangChain Modern Guidelines (v0.2/v0.3+ LCEL):
-  - Model Imports: Use partner packages (e.g. 'from langchain_openai import ChatOpenAI' instead of 'from langchain.chat_models import ChatOpenAI').
-  - Core Schemas: 'from langchain_core.messages import SystemMessage, HumanMessage, AIMessage'
-  - Prompts: 'from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder'
-  - Chains: Migrate 'LLMChain' to LCEL pipe syntax: chain = prompt | llm | StrOutputParser()
-  - Execution: Use 'chain.invoke({...})' or 'agent_executor.invoke({...})' instead of deprecated '.run(...)'.
-  - Tools: Import community tools from 'langchain_community.tools' (e.g. from langchain_community.tools.ddg import DuckDuckGoSearchRun).
-"""
-    },
-
-    "pydantic": {
-        "aliases": ["pydantic"],
-        "description": "Pydantic v2.0+ Modernization",
-        "guidance": """\
-• Pydantic v2 Migration Guidelines:
-  - Configuration: Replace inner 'class Config:' with 'model_config = ConfigDict(from_attributes=True, ...)'
-  - Exports: Replace '.dict()' with '.model_dump()', and '.json()' with '.model_dump_json()'
-  - Validators: Replace '@validator' with '@field_validator' or '@model_validator(mode="after")'
-  - BaseSettings: Import from 'pydantic_settings import BaseSettings, SettingsConfigDict'
-"""
-    },
-
-    "stripe": {
-        "aliases": ["stripe"],
-        "description": "Stripe Python SDK Modernization",
-        "guidance": """\
-• Stripe Modern Guidelines:
-  - Initialization: stripe_client = stripe.StripeClient(api_key=...)
-  - Charges/Payments: stripe_client.charges.create(...) or stripe_client.payment_intents.create(...)
-"""
-    },
-
-    "supabase": {
-        "aliases": ["supabase", "@supabase/supabase-js"],
-        "description": "Supabase v2 Auth & Database SDK",
-        "guidance": """\
-• Supabase v2 Migration Guidelines:
-  - JS Auth: supabase.auth.signInWithPassword({ email, password }) instead of supabase.auth.signIn()
-  - JS User: supabase.auth.getUser() instead of supabase.auth.user()
-  - Python: from supabase import create_client, Client; supabase = create_client(url, key)
+• LangChain v0.3+ Enterprise Migration Guidelines:
+  - Partner Package Imports (MANDATORY in v0.3):
+      OLD: from langchain.chat_models import ChatOpenAI
+      NEW: from langchain_openai import ChatOpenAI
+      OLD: from langchain.chat_models import ChatAnthropic
+      NEW: from langchain_anthropic import ChatAnthropic
+      OLD: from langchain.embeddings import OpenAIEmbeddings
+      NEW: from langchain_openai import OpenAIEmbeddings
+      OLD: from langchain.document_loaders import TextLoader, PyPDFLoader
+      NEW: from langchain_community.document_loaders import TextLoader, PyPDFLoader
+      OLD: from langchain.vectorstores import Chroma, FAISS
+      NEW: from langchain_community.vectorstores import Chroma, FAISS (or from langchain_chroma import Chroma)
+  - Core Schemas & Messages:
+      from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+      from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+      from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+  - Deprecated Chains & LCEL Migration:
+      OLD: from langchain.chains import LLMChain
+           chain = LLMChain(llm=llm, prompt=prompt)
+           output = chain.run(topic="AI")
+      NEW: chain = prompt | llm | StrOutputParser()
+           output = chain.invoke({"topic": "AI"})
+  - Deprecated RetrievalQA:
+      OLD: from langchain.chains import RetrievalQA; qa = RetrievalQA.from_chain_type(...)
+      NEW: from langchain.chains import create_retrieval_chain
+           from langchain.chains.combine_documents import create_stuff_documents_chain
+           combine_docs_chain = create_stuff_documents_chain(llm, prompt)
+           retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+  - Deprecated Agent Initialization:
+      OLD: from langchain.agents import initialize_agent, AgentType
+      NEW: from langchain.agents import create_tool_calling_agent, AgentExecutor
+           or from langgraph.prebuilt import create_react_agent
+  - Execution Method:
+      ALWAYS migrate '.run(...)' and '.__call__(...)' to '.invoke(...)'.
+      Use '.batch([...])' for parallel inputs and '.stream(...)'.
 """
     },
 
     "anthropic": {
-        "aliases": ["anthropic", "@anthropic-ai/sdk"],
-        "description": "Anthropic Claude Messages API",
+        "aliases": ["anthropic", "@anthropic-ai/sdk", "claude"],
+        "description": "Anthropic Claude Modern Messages API & Structured Tool Use (v0.30 - v0.40+)",
         "guidance": """\
-• Anthropic Claude Modern Guidelines:
-  - Python: from anthropic import Anthropic; client = Anthropic()
-  - Messages API: client.messages.create(model="claude-3-5-sonnet-20241022", max_tokens=1024, messages=[{"role": "user", "content": ...}])
+• Anthropic Claude 2026 Modern Messages API Guidelines:
+  - Client Initialization:
+      from anthropic import Anthropic, AsyncAnthropic
+      client = Anthropic(api_key=...)
+  - Standard Messages Call (Replacing legacy completion()):
+      OLD: response = client.completion(prompt=f"{HUMAN_PROMPT} Hello{AI_PROMPT}", model="claude-2")
+      NEW: response = client.messages.create(
+               model="claude-3-5-sonnet-20241022",
+               max_tokens=2048,
+               messages=[{"role": "user", "content": "Hello"}]
+           )
+           text = response.content[0].text
+  - Structured Tool Use (Function Calling):
+      tools = [{
+          "name": "lookup_data",
+          "description": "Queries enterprise knowledge database",
+          "input_schema": {
+              "type": "object",
+              "properties": {
+                  "query": {"type": "string", "description": "Search keyword"}
+              },
+              "required": ["query"]
+          }
+      }]
+      response = client.messages.create(
+          model="claude-3-5-sonnet-20241022",
+          max_tokens=2048,
+          tools=tools,
+          messages=[{"role": "user", "content": user_input}]
+      )
+  - Streaming Context Manager:
+      with client.messages.stream(
+          model="claude-3-5-sonnet-20241022",
+          max_tokens=1024,
+          messages=[{"role": "user", "content": prompt}]
+      ) as stream:
+          for text in stream.text_stream:
+              print(text, end="", flush=True)
+  - Preferred Models: 'claude-3-5-sonnet-20241022', 'claude-3-7-sonnet-20250219', 'claude-3-5-haiku-20241022'
 """
     },
 
@@ -144,6 +193,34 @@ MIGRATION_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
           yield
           # shutdown logic
       app = FastAPI(lifespan=lifespan)
+"""
+    },
+
+    "pydantic": {
+        "aliases": ["pydantic", "pydantic-core", "pydantic-settings"],
+        "description": "Pydantic v2 Modern Migration (ConfigDict, field_validator, model_dump)",
+        "guidance": """\
+• Pydantic v2 Migration Guidelines:
+  - Configuration Migration:
+      OLD: class Config:
+               orm_mode = True
+               allow_population_by_field_name = True
+      NEW: from pydantic import ConfigDict
+           model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+  - Validators Migration:
+      OLD: from pydantic import validator
+           @validator('name')
+           def check_name(cls, v): return v
+      NEW: from pydantic import field_validator
+           @field_validator('name')
+           @classmethod
+           def check_name(cls, v): return v
+  - Serialization:
+      OLD: user.dict(), user.json()
+      NEW: user.model_dump(), user.model_dump_json()
+  - Settings Management:
+      OLD: from pydantic import BaseSettings
+      NEW: from pydantic_settings import BaseSettings
 """
     }
 }

@@ -108,7 +108,7 @@ class GeminiProvider(BaseProvider):
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=90) as response:
             data = json.loads(response.read().decode("utf-8"))
             candidates = data.get("candidates", [])
             if candidates:

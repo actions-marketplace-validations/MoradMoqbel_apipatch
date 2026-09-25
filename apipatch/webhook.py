@@ -7,11 +7,13 @@ refactoring and PR submission engine in the background.
 
 import os
 import sys
+import re
 import json
 import hmac
 import hashlib
 import threading
-from typing import Optional, Dict, Any
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional, Dict, Any, Set
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 
@@ -20,11 +22,16 @@ from apipatch.github_client import resolve_github_token, mask_token
 from apipatch.proactive_hunter import GitHubPRHunter
 from apipatch.engine import ApiPatchEngine, Colors
 
+_RE_VALID_REPO = re.compile(r"^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$")
+_ACTIVE_AUDITS: Set[str] = set()
+_AUDIT_LOCK = threading.Lock()
+_WEBHOOK_WORKER_POOL = ThreadPoolExecutor(max_workers=3, thread_name_prefix="apipatch-webhook")
+
 
 def verify_signature(payload_bytes: bytes, signature_header: Optional[str], secret: Optional[str]) -> bool:
     """
     Validates the GitHub Webhook HMAC-SHA256 signature (X-Hub-Signature-256).
-    If secret is not set, returns True.
+    If secret is not set, returns True (open dev mode).
     """
     if not secret:
         return True
@@ -110,18 +117,30 @@ class ApiPatchWebhookHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"status": "ignored", "reason": "Self-triggered push"})
                 return
 
-            if not repo_name:
-                self._send_json(400, {"error": "Missing repository full_name"})
+            if not repo_name or not _RE_VALID_REPO.match(repo_name):
+                self._send_json(400, {"error": "Invalid repository full_name format. Expected 'owner/repo'."})
                 return
+
+            if not isinstance(ref, str) or len(ref) > 200:
+                self._send_json(400, {"error": "Invalid ref parameter."})
+                return
+
+            # Deduplication check: prevent multiple concurrent audits for the same repository
+            with _AUDIT_LOCK:
+                if repo_name in _ACTIVE_AUDITS:
+                    print(f"[Webhook] Audit already in progress for {repo_name}. Skipping duplicate push trigger.")
+                    self._send_json(200, {
+                        "status": "skipped",
+                        "reason": "Audit already in progress for this repository",
+                        "repo": repo_name
+                    })
+                    return
+                _ACTIVE_AUDITS.add(repo_name)
 
             print(f"{Colors.OKGREEN}[Webhook] Triggering autonomous audit for push on {repo_name} ({ref})...{Colors.ENDC}")
 
-            # Run in background thread to respond to GitHub immediately (< 10s timeout)
-            threading.Thread(
-                target=self._run_async_pipeline,
-                args=(repo_name, None),
-                daemon=True
-            ).start()
+            # Schedule in bounded worker pool to respond to GitHub immediately (< 10s timeout)
+            _WEBHOOK_WORKER_POOL.submit(self._run_async_pipeline, repo_name, None)
 
             self._send_json(202, {
                 "status": "accepted",
@@ -157,7 +176,7 @@ class ApiPatchWebhookHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"status": "unhandled_event", "event": event})
 
     def _run_async_pipeline(self, repo_name: str, base_branch: Optional[str] = None):
-        """Asynchronously runs ApiPatch engine and submits PR."""
+        """Asynchronously runs ApiPatch engine and submits PR, then releases active lock."""
         try:
             hunter: GitHubPRHunter = self.server.hunter
             hunter.audit_and_pr_repository(
@@ -167,6 +186,9 @@ class ApiPatchWebhookHandler(BaseHTTPRequestHandler):
             )
         except Exception as e:
             print(f"{Colors.FAIL}[!] Webhook background pipeline error for {repo_name}: {e}{Colors.ENDC}")
+        finally:
+            with _AUDIT_LOCK:
+                _ACTIVE_AUDITS.discard(repo_name)
 
     def _send_json(self, status_code: int, data: Dict[str, Any]):
         """Helper to send structured JSON HTTP response."""

@@ -422,9 +422,28 @@ class GitHubPRHunter:
         creates a branch (directly or on a fork), commits all modified files, and opens
         a comprehensive live Pull Request.
         """
-        repo_name = GitHubClient.normalize_repo_name(repo_name)
+        raw_input = repo_name
+        repo_name, target_pr_number = GitHubClient.parse_pr_target(raw_input)
         print(f"\n{Colors.HEADER}{Colors.BOLD}=== ApiPatch: Autonomous GitHub PR Pipeline ==={Colors.ENDC}")
         print(f"Target Repository: {Colors.OKCYAN}{repo_name}{Colors.ENDC}")
+        
+        pr_meta = None
+        pr_branch_ref = None
+        pr_changed_files: List[str] = []
+        if target_pr_number:
+            print(f"Inspecting Pull Request: {Colors.BOLD}#{target_pr_number}{Colors.ENDC}")
+            pr_meta = self.client.get_pull_request(repo_name, target_pr_number)
+            if pr_meta:
+                pr_title = pr_meta.get("title", "")
+                pr_branch_ref = pr_meta.get("head", {}).get("ref")
+                print(f"  PR Title: {Colors.BOLD}{pr_title}{Colors.ENDC}")
+                if pr_branch_ref:
+                    print(f"  PR Branch Ref: {Colors.OKCYAN}{pr_branch_ref}{Colors.ENDC}")
+                pr_files_data = self.client.get_pull_request_files(repo_name, target_pr_number)
+                pr_changed_files = [f.get("filename", "") for f in pr_files_data if f.get("filename")]
+                if pr_changed_files:
+                    print(f"  PR Changed Files ({len(pr_changed_files)}): {', '.join(pr_changed_files[:5])}{'...' if len(pr_changed_files) > 5 else ''}")
+
         if target_path:
             print(f"Scope Filter (Target Path): {Colors.BOLD}{target_path}{Colors.ENDC}")
         if verify_tests:
@@ -449,25 +468,33 @@ class GitHubPRHunter:
             print(f"{Colors.FAIL}[!] Could not retrieve commit SHA for branch '{base_branch}' in {repo_name}.{Colors.ENDC}")
             return {"status": "error", "error": f"Base branch {base_branch} not found"}
 
-        print(f"Base Branch: {Colors.BOLD}{base_branch}{Colors.ENDC} ({base_sha[:8]})")
+        audit_ref = pr_branch_ref or base_branch
+        print(f"Audit Target Branch: {Colors.BOLD}{audit_ref}{Colors.ENDC} ({base_sha[:8]})")
 
         # 1. Gather files to audit
         audit_results: List[Dict[str, Any]] = []
         files_to_commit: Dict[str, str] = {}
 
-        print(f"\n{Colors.OKCYAN}[*] Fetching file tree for {repo_name}...{Colors.ENDC}")
+        print(f"\n{Colors.OKCYAN}[*] Fetching file tree for {repo_name} ({audit_ref})...{Colors.ENDC}")
         try:
-            tree_items = self.client.get_repo_file_tree(repo_name, base_branch)
+            tree_items = self.client.get_repo_file_tree(repo_name, audit_ref)
         except Exception:
             tree_items = []
+        if not tree_items and audit_ref != base_branch:
+            # Fallback to base branch tree if PR branch is remote
+            try:
+                tree_items = self.client.get_repo_file_tree(repo_name, base_branch)
+            except Exception:
+                tree_items = []
+
         print(f"[✓] Retrieved {len(tree_items)} total repository files.")
 
         all_tree_paths = [it.get("path", "") for it in tree_items]
         subprojects = MonorepoManager.discover_subprojects_from_paths(all_tree_paths)
         is_mono = MonorepoManager.is_monorepo(subprojects)
         if is_mono and not target_path:
-            non_root = [d for d in subprojects.keys() if d]
-            print(f"  {Colors.OKBLUE}[*] Monorepo architecture detected: Found {len(non_root)} distinct subproject workspace(s).{Colors.ENDC}")
+            workspaces = [d or "root" for d in subprojects.keys()]
+            print(f"  {Colors.OKBLUE}[*] Monorepo architecture detected: Found {len(subprojects)} distinct subproject workspace(s): {', '.join(workspaces)}.{Colors.ENDC}")
 
         if precomputed_results:
             audit_results = precomputed_results
@@ -478,44 +505,51 @@ class GitHubPRHunter:
             supported_exts = (".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs")
             target_norm = target_path.strip("/\\").replace("\\", "/").lower() if target_path else None
             candidate_files = []
-            for item in tree_items:
-                p = item.get("path", "")
-                if not p.endswith(supported_exts):
-                    continue
-                if any(ignore in p for ignore in [
-                    "node_modules/", ".git/", "__pycache__/", "venv/", ".env", "dist/", "build/"
-                ]):
-                    continue
-                if target_norm:
-                    p_lower = p.replace("\\", "/").lower()
-                    if not (p_lower == target_norm or p_lower.startswith(target_norm + "/") or f"/{target_norm}/" in ("/" + p_lower) or target_norm in p_lower):
-                        continue
-                candidate_files.append(p)
-
-            if is_mono and not target_norm and candidate_files:
-                sampled_candidates = []
-                if files_per_subproject is not None:
-                    per_sub_limit = max(1, files_per_subproject)
-                    for s_dir, s_data in subprojects.items():
-                        sub_files = [f for f in s_data.get("files", []) if f in candidate_files]
-                        ordered = _sort_subproject_files(sub_files)
-                        sampled_candidates.extend(ordered[:per_sub_limit])
-                    candidate_files = sampled_candidates
-                    print(f"  {Colors.OKBLUE}[*] Monorepo Full Coverage: Sampled {per_sub_limit} entrypoint file(s) per subproject across {len(subprojects)} workspaces ({len(candidate_files)} total files).{Colors.ENDC}")
-                else:
-                    per_sub_limit = max(1, max_files // (len(subprojects) or 1)) if len(subprojects) > max_files else max(3, max_files // (len(subprojects) or 1))
-                    for s_dir, s_data in subprojects.items():
-                        sub_files = [f for f in s_data.get("files", []) if f in candidate_files]
-                        ordered = _sort_subproject_files(sub_files)
-                        sampled_candidates.extend(ordered[:per_sub_limit])
-                    limit = max_files if (max_files and max_files > 0) else None
-                    if sampled_candidates:
-                        candidate_files = sampled_candidates[:limit] if limit else sampled_candidates
-                    else:
-                        candidate_files = candidate_files[:limit] if limit else candidate_files
+            
+            # If inspecting a specific PR with changed code files, prioritize PR changed files
+            pr_code_files = [f for f in pr_changed_files if f.endswith(supported_exts)]
+            if pr_code_files and not target_norm:
+                candidate_files = list(pr_code_files)
+                print(f"  {Colors.OKBLUE}[*] Scoped audit to {len(candidate_files)} file(s) modified in PR #{target_pr_number}.{Colors.ENDC}")
             else:
-                limit = max_files if (max_files and max_files > 0) else None
-                candidate_files = candidate_files[:limit] if limit else candidate_files
+                for item in tree_items:
+                    p = item.get("path", "")
+                    if not p.endswith(supported_exts):
+                        continue
+                    if any(ignore in p for ignore in [
+                        "node_modules/", ".git/", "__pycache__/", "venv/", ".env", "dist/", "build/"
+                    ]):
+                        continue
+                    if target_norm:
+                        p_lower = p.replace("\\", "/").lower()
+                        if not (p_lower == target_norm or p_lower.startswith(target_norm + "/") or f"/{target_norm}/" in ("/" + p_lower) or target_norm in p_lower):
+                            continue
+                    candidate_files.append(p)
+
+                if is_mono and not target_norm and candidate_files:
+                    sampled_candidates = []
+                    if files_per_subproject is not None:
+                        per_sub_limit = max(1, files_per_subproject)
+                        for s_dir, s_data in subprojects.items():
+                            sub_files = [f for f in s_data.get("files", []) if f in candidate_files]
+                            ordered = _sort_subproject_files(sub_files)
+                            sampled_candidates.extend(ordered[:per_sub_limit])
+                        candidate_files = sampled_candidates
+                        print(f"  {Colors.OKBLUE}[*] Monorepo Full Coverage: Sampled {per_sub_limit} entrypoint file(s) per subproject across {len(subprojects)} workspaces ({len(candidate_files)} total files).{Colors.ENDC}")
+                    else:
+                        per_sub_limit = max(1, max_files // (len(subprojects) or 1)) if len(subprojects) > max_files else max(3, max_files // (len(subprojects) or 1))
+                        for s_dir, s_data in subprojects.items():
+                            sub_files = [f for f in s_data.get("files", []) if f in candidate_files]
+                            ordered = _sort_subproject_files(sub_files)
+                            sampled_candidates.extend(ordered[:per_sub_limit])
+                        limit = max_files if (max_files and max_files > 0) else None
+                        if sampled_candidates:
+                            candidate_files = sampled_candidates[:limit] if limit else sampled_candidates
+                        else:
+                            candidate_files = candidate_files[:limit] if limit else candidate_files
+                else:
+                    limit = max_files if (max_files and max_files > 0) else None
+                    candidate_files = candidate_files[:limit] if limit else candidate_files
 
             import socket
             import threading
@@ -523,26 +557,21 @@ class GitHubPRHunter:
 
             print(f"[*] Inspecting {len(candidate_files)} supported candidate code files in parallel...")
 
-            completed_count = 0
+            audited_count = 0
             count_lock = threading.Lock()
-            total_candidates = len(candidate_files)
 
             def _inspect_single_file(path: str):
-                nonlocal completed_count
+                nonlocal audited_count
                 try:
-                    content = self.client.fetch_file_content(repo_name, path, ref=base_branch)
+                    content = self.client.fetch_file_content(repo_name, path, ref=audit_ref)
                     if not content:
-                        with count_lock:
-                            completed_count += 1
                         return None
                     if not should_audit_file(content, path):
-                        with count_lock:
-                            completed_count += 1
                         return None
                     with count_lock:
-                        completed_count += 1
-                        current_num = completed_count
-                    print(f"  {Colors.OKBLUE}[{current_num}/{total_candidates}] Auditing: {path}...{Colors.ENDC}", flush=True)
+                        audited_count += 1
+                        current_num = audited_count
+                    print(f"  {Colors.OKBLUE}[Auditing {current_num}] {path}...{Colors.ENDC}", flush=True)
                     audit = self.engine.audit_code(path, content)
                     if audit.get("has_breaking_changes") and audit.get("refactored_code"):
                         diff = self.engine.generate_diff(content, audit["refactored_code"], path)
@@ -555,6 +584,7 @@ class GitHubPRHunter:
                 except Exception:
                     pass
                 return None
+
 
             from concurrent.futures import ThreadPoolExecutor, as_completed
             with ThreadPoolExecutor(max_workers=min(3, len(candidate_files) or 1)) as executor:
@@ -612,6 +642,18 @@ class GitHubPRHunter:
             for r in audit_results:
                 file_path = r.get("file", "").replace("\\", "/")
                 file_libs = {iss["library"] for iss in r.get("detected_issues", []) if iss.get("library")}
+                if r.get("refactored_code"):
+                    from apipatch.validator import CodeValidator
+                    ref_mods = CodeValidator.extract_imported_modules(r["refactored_code"])
+                    for mod in ref_mods:
+                        if "google" in mod and "genai" in mod:
+                            file_libs.add("google-genai")
+                        elif mod.startswith("langchain_anthropic"):
+                            file_libs.add("langchain-anthropic")
+                        elif mod.startswith("langchain_openai"):
+                            file_libs.add("langchain-openai")
+                        elif mod.startswith("langchain_google_genai"):
+                            file_libs.add("langchain-google-genai")
                 if not file_libs:
                     continue
 

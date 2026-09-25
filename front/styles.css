@@ -1344,9 +1344,276 @@ footer {
 }
 
 /* ==========================================================================
+   Production Milestones & 342k+ Stars Social Proof
+   ========================================================================== */
+.milestones-section {
+  padding: 6rem 2rem 5rem;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(circle at 50% 10%, rgba(163, 230, 53, 0.04) 0%, transparent 70%);
+}
+
+.milestones-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.quote-highlight-card {
+  background: linear-gradient(135deg, rgba(163, 230, 53, 0.08) 0%, rgba(17, 18, 23, 0.95) 100%);
+  border: 1px solid rgba(163, 230, 53, 0.3);
+  border-radius: 12px;
+  padding: 2.2rem 2.5rem;
+  margin-bottom: 3rem;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.quote-highlight-card::before {
+  content: "“";
+  position: absolute;
+  top: -15px;
+  right: 25px;
+  font-family: var(--serif);
+  font-size: 8rem;
+  color: rgba(163, 230, 53, 0.12);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.quote-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  background: rgba(163, 230, 53, 0.15);
+  color: var(--lime);
+  border: 1px solid rgba(163, 230, 53, 0.4);
+  padding: 0.3rem 0.75rem;
+  border-radius: 100px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.quote-quote {
+  font-family: var(--serif);
+  font-size: 1.85rem;
+  line-height: 1.35;
+  color: var(--white);
+  font-style: italic;
+  max-width: 900px;
+}
+
+.quote-author {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.author-name {
+  font-weight: 600;
+  color: var(--white);
+}
+
+.author-role {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.milestones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.milestone-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.6rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transition: all 0.25s ease;
+}
+
+.milestone-card:hover {
+  border-color: rgba(163, 230, 53, 0.35);
+  background: var(--card-hover);
+  transform: translateY(-2px);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.repo-title {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--white);
+}
+
+.repo-stars {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--yellow);
+  background: rgba(250, 204, 21, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.milestone-badge {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--lime);
+  background: rgba(163, 230, 53, 0.1);
+  border: 1px solid rgba(163, 230, 53, 0.25);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.milestone-desc {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.55;
+  flex: 1;
+}
+
+.milestone-link {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--lime);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.milestone-link:hover {
+  text-decoration: underline;
+  color: #bef264;
+}
+
+/* ==========================================================================
+   Design Partner Program / Private Pilot
+   ========================================================================== */
+.pilot-section {
+  padding: 6rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(circle at 50% 90%, rgba(56, 189, 248, 0.05) 0%, transparent 60%);
+}
+
+.pilot-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.pilot-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2.5rem;
+  margin-top: 2.5rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.pilot-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group.full-width {
+  grid-column: span 2;
+}
+
+.form-group label {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group input, .form-group select {
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  color: var(--white);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 2px var(--lime-glow);
+}
+
+.pilot-btn {
+  width: 100%;
+  background: var(--lime);
+  color: var(--black);
+  border: none;
+  padding: 0.9rem 1.5rem;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.pilot-btn:hover {
+  background: #bef264;
+  box-shadow: 0 0 20px rgba(163, 230, 53, 0.35);
+}
+
+.pilot-note {
+  font-size: 0.78rem;
+  color: var(--dim);
+  text-align: center;
+  margin-top: 1rem;
+  font-family: var(--mono);
+}
+
+/* ==========================================================================
    Responsive Adaptations
    ========================================================================== */
 @media (max-width: 1024px) {
+  .milestones-grid {
+    grid-template-columns: 1fr;
+  }
+  .pilot-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-group.full-width {
+    grid-column: span 1;
+  }
   .feature-grid {
     grid-template-columns: repeat(2, 1fr);
   }

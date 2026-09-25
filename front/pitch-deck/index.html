@@ -3,185 +3,380 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ApiPatch — Pitch Deck</title>
+  <title>ApiPatch — Pre-Seed Pitch Deck</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --cyan:    #00F5FF;
-      --purple:  #7C3AED;
-      --purple2: #A855F7;
-      --pink:    #EC4899;
-      --dark:    #05050F;
-      --dark2:   #0D0D1A;
-      --dark3:   #141428;
-      --card:    rgba(255,255,255,0.04);
-      --border:  rgba(255,255,255,0.08);
-      --text:    #E2E8F0;
-      --muted:   #94A3B8;
-      --green:   #10B981;
-      --amber:   #F59E0B;
+      --bg: #070913;
+      --bg-card: rgba(255, 255, 255, 0.035);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-accent: rgba(56, 189, 248, 0.3);
+      --text: #F1F5F9;
+      --muted: #94A3B8;
+      --dim: #64748B;
+      --accent: #38BDF8;
+      --accent-purple: #A855F7;
+      --success: #34D399;
+      --danger: #F87171;
     }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Inter', sans-serif; background: var(--dark); color: var(--text); overflow-x: hidden; }
-    .bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px); background-size: 60px 60px; }
-    .bg-glow-1 { position: fixed; top: -200px; left: -200px; z-index: 0; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%); animation: float1 8s ease-in-out infinite; pointer-events: none; }
-    .bg-glow-2 { position: fixed; bottom: -200px; right: -200px; z-index: 0; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(circle, rgba(0,245,255,0.1) 0%, transparent 70%); animation: float2 10s ease-in-out infinite; pointer-events: none; }
-    @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
-    @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-60px,-40px)} }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      z-index: 0;
+    }
     .slides-wrapper { position: relative; z-index: 1; }
-    .slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 60px 40px; position: relative; border-bottom: 1px solid var(--border); opacity: 0; transform: translateY(40px); transition: opacity 0.7s ease, transform 0.7s ease; }
-    .slide.visible { opacity: 1; transform: translateY(0); }
-    .slide-inner { width: 100%; max-width: 1100px; margin: 0 auto; }
-    .slide-label { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    .slide-label::before { content: ''; width: 30px; height: 1px; background: var(--cyan); }
-    h1 { font-size: clamp(42px, 6vw, 80px); font-weight: 900; line-height: 1.05; letter-spacing: -2px; }
-    h2 { font-size: clamp(32px, 4.5vw, 58px); font-weight: 800; line-height: 1.1; letter-spacing: -1.5px; }
-    h3 { font-size: clamp(20px, 2.5vw, 28px); font-weight: 700; }
-    .gradient-text { background: linear-gradient(135deg, var(--cyan), var(--purple2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .gradient-text-2 { background: linear-gradient(135deg, var(--purple2), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .lead { font-size: clamp(17px, 2vw, 22px); color: var(--muted); line-height: 1.7; font-weight: 400; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 32px; transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s; }
-    .card:hover { border-color: rgba(0,245,255,0.25); transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,245,255,0.08); }
-    .card-grid { display: grid; gap: 24px; }
-    .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
-    .card-grid-3 { grid-template-columns: repeat(3, 1fr); }
-    .card-grid-4 { grid-template-columns: repeat(4, 1fr); }
-    @media(max-width:900px){.card-grid-3,.card-grid-4{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:600px){.card-grid-2,.card-grid-3,.card-grid-4{grid-template-columns:1fr}}
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600; }
-    .badge-cyan   { background: rgba(0,245,255,0.12); color: var(--cyan);   border: 1px solid rgba(0,245,255,0.25); }
-    .badge-purple { background: rgba(124,58,237,0.15); color: var(--purple2); border: 1px solid rgba(168,85,247,0.3); }
-    .badge-green  { background: rgba(16,185,129,0.12); color: var(--green);  border: 1px solid rgba(16,185,129,0.3); }
-    .badge-amber  { background: rgba(245,158,11,0.12); color: var(--amber);  border: 1px solid rgba(245,158,11,0.3); }
-    .stat-num { font-size: clamp(40px, 6vw, 72px); font-weight: 900; line-height: 1; letter-spacing: -2px; }
-    .stat-label { font-size: 14px; color: var(--muted); margin-top: 6px; font-weight: 500; }
-    .code-block { font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 12px; padding: 24px; overflow-x: auto; position: relative; }
-    .code-block .dot-row { display: flex; gap: 8px; margin-bottom: 16px; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot-r{background:#FF5F57}.dot-y{background:#FFBD2E}.dot-g{background:#28CA41}
-    .code-bad{color:#F87171}.code-good{color:#6EE7B7}.code-dim{color:#64748B}.code-cyan{color:var(--cyan)}.code-purple{color:#C084FC}.code-amber{color:var(--amber)}
-    .divider { width: 60px; height: 3px; background: linear-gradient(90deg, var(--cyan), var(--purple2)); border-radius: 2px; margin: 24px 0; }
-    .step-list { display: flex; flex-direction: column; gap: 0; }
-    .step-item { display: flex; gap: 24px; align-items: flex-start; padding: 24px 0; border-bottom: 1px solid var(--border); }
-    .step-item:last-child { border-bottom: none; }
-    .step-num { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--purple), var(--cyan)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; }
-    .step-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-    .step-desc { color: var(--muted); font-size: 15px; line-height: 1.6; }
-    .compare-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
-    .compare-table th { padding: 16px 24px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; background: rgba(0,0,0,0.3); color: var(--muted); text-align: left; }
-    .compare-table th.highlight { color: var(--cyan); background: rgba(0,245,255,0.06); }
-    .compare-table td { padding: 16px 24px; font-size: 15px; border-top: 1px solid var(--border); vertical-align: middle; }
-    .compare-table td.highlight { background: rgba(0,245,255,0.04); color: var(--cyan); font-weight: 600; }
-    .compare-table td:first-child { color: var(--muted); font-weight: 500; }
-    .check{color:var(--green);font-size:18px}.cross{color:#EF4444;font-size:18px}.partial{color:var(--amber);font-size:18px}
-    .progress-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 8px; }
-    .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--cyan), var(--purple2)); transition: width 1.5s cubic-bezier(0.23,1,0.32,1); width: 0%; }
-    .slide.visible .progress-fill { width: var(--target); }
-    .logo-mark { width: 80px; height: 80px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 20px; box-shadow: 0 0 60px rgba(0,245,255,0.3),0 0 120px rgba(124,58,237,0.2); animation: pulse-glow 3s ease-in-out infinite; }
-    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 40px rgba(0,245,255,0.3),0 0 80px rgba(124,58,237,0.2)} 50%{box-shadow:0 0 80px rgba(0,245,255,0.5),0 0 150px rgba(124,58,237,0.35)} }
-    .hero-tag { display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px; border-radius: 100px; background: rgba(0,245,255,0.08); border: 1px solid rgba(0,245,255,0.2); font-size: 13px; font-weight: 600; color: var(--cyan); margin-bottom: 24px; }
-    .dot-live { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); animation: blink 1.5s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-    .hero-stats-row { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 48px; }
-    .hero-stat { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
-    .hero-stat-val { font-size: 20px; font-weight: 800; }
-    .hero-stat-lbl { font-size: 12px; color: var(--muted); }
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 30px; border-radius: 12px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-    .btn-primary { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: #fff; box-shadow: 0 4px 24px rgba(0,245,255,0.25); }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(0,245,255,0.4); }
-    .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-    .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); transform: translateY(-2px); }
-    .nav-dots { position: fixed; right: 28px; top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; gap: 12px; }
-    .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: all 0.3s; border: none; }
-    .nav-dot.active,.nav-dot:hover { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); transform: scale(1.4); }
-    .slide-counter { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); letter-spacing: 2px; z-index: 100; }
-    .flow { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 8px 0; }
-    .flow-node { flex-shrink: 0; padding: 16px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; text-align: center; font-size: 13px; font-weight: 600; min-width: 120px; transition: all 0.3s; }
-    .flow-node:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,245,255,0.15); }
-    .fn-icon { font-size: 24px; display: block; margin-bottom: 6px; }
-    .flow-arrow { font-size: 24px; color: var(--cyan); padding: 0 8px; flex-shrink: 0; }
-    .flow-node.success { border-color: var(--green); background: rgba(16,185,129,0.08); }
-    .timeline { position: relative; padding-left: 40px; }
-    .timeline::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px; background: linear-gradient(to bottom, var(--cyan), var(--purple2), transparent); }
-    .tl-item { position: relative; margin-bottom: 36px; }
-    .tl-item::before { content: ''; position: absolute; left: -33px; top: 6px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--cyan); background: var(--dark); }
-    .tl-item.done::before { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
-    .tl-phase { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); margin-bottom: 4px; }
-    .tl-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-    .tl-desc { font-size: 14px; color: var(--muted); }
-    .founder-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 40px; display: flex; gap: 32px; align-items: flex-start; }
-    .founder-avatar { width: 100px; height: 100px; border-radius: 20px; flex-shrink: 0; background: linear-gradient(135deg, var(--purple), var(--cyan)); display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 0 40px rgba(124,58,237,0.3); }
-    .ask-ring { width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(0,245,255,0.15) 0%, transparent 70%); border: 2px solid rgba(0,245,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 900; text-align: center; line-height: 1; flex-shrink: 0; animation: pulse-ring 3s ease-in-out infinite; }
-    @keyframes pulse-ring { 0%,100%{box-shadow:0 0 0 0 rgba(0,245,255,0.3)} 50%{box-shadow:0 0 0 20px rgba(0,245,255,0)} }
-    .flex{display:flex}.gap-8{gap:8px}.gap-16{gap:16px}.gap-24{gap:24px}.gap-32{gap:32px}.gap-48{gap:48px}.col{flex-direction:column}.wrap{flex-wrap:wrap}.items-center{align-items:center}.items-start{align-items:flex-start}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.text-center{text-align:center}
-    .mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}.mt-24{margin-top:24px}.mt-32{margin-top:32px}.mt-40{margin-top:40px}.mt-48{margin-top:48px}.mb-8{margin-bottom:8px}.mb-16{margin-bottom:16px}.mb-24{margin-bottom:24px}.mb-32{margin-bottom:32px}.w-full{width:100%}.mono{font-family:'JetBrains Mono',monospace}
-    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(0,245,255,0.3)}
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 80px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+    .slide-inner {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid var(--border-accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .tag-neutral {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border);
+      color: var(--muted);
+    }
+    h1 {
+      font-size: 46px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.2px;
+      color: #FFFFFF;
+    }
+    h2 {
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.8px;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+    .lead {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-weight: 400;
+    }
+    .accent-text { color: var(--accent); }
+    .muted-text { color: var(--muted); }
+    .grid { display: grid; gap: 20px; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .card-accent {
+      border-color: var(--border-accent);
+      background: rgba(56, 189, 248, 0.03);
+    }
+    .stat-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .code-red { color: var(--danger); }
+    .code-green { color: var(--success); }
+    .code-dim { color: var(--dim); }
+    .code-cyan { color: var(--accent); }
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .flow-steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    .flow-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .flow-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .flow-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+    }
+    .flow-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .table-container {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13.5px;
+    }
+    th, td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: rgba(255, 255, 255, 0.025);
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    th.highlight, td.highlight {
+      background: rgba(56, 189, 248, 0.04);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 50;
+    }
+    .nav-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-dot.active {
+      background: var(--accent);
+      transform: scale(1.4);
+    }
+    .counter {
+      position: fixed;
+      bottom: 20px;
+      right: 32px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--dim);
+      z-index: 50;
+    }
+
+    /* Print styling for crisp 16:9 PDF export */
+    @page {
+      size: 1920px 1080px;
+      margin: 0;
+    }
+    @media print {
+      html, body {
+        width: 1920px !important;
+        height: auto !important;
+        background: #070913 !important;
+        color: #F1F5F9 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .bg-grid, .nav-dots, .counter {
+        display: none !important;
+      }
+      .slide {
+        width: 1920px !important;
+        height: 1080px !important;
+        max-height: 1080px !important;
+        min-height: 1080px !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        box-sizing: border-box !important;
+        padding: 80px 120px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow: hidden !important;
+      }
+      .slide-inner {
+        width: 100% !important;
+        max-width: 1600px !important;
+      }
+      h1 { font-size: 52px !important; }
+      h2 { font-size: 40px !important; }
+      .lead { font-size: 20px !important; }
+      .stat-num { font-size: 44px !important; }
+      .stat-label { font-size: 15px !important; }
+      .card { padding: 28px !important; }
+      .code-block { font-size: 14px !important; line-height: 1.6 !important; }
+      table { font-size: 15px !important; }
+      th, td { padding: 16px 24px !important; }
+      .flow-title { font-size: 16px !important; }
+      .flow-desc { font-size: 13.5px !important; }
+    }
   </style>
 </head>
 <body>
   <div class="bg-grid"></div>
-  <div class="bg-glow-1"></div>
-  <div class="bg-glow-2"></div>
-  <nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
-  <div class="slide-counter" id="slideCounter">1 / 10</div>
+  <nav class="nav-dots" id="navDots"></nav>
+  <div class="counter" id="counter">01 / 10</div>
 
   <div class="slides-wrapper">
 
     <!-- SLIDE 1: HERO -->
-    <section class="slide" id="slide-1" data-slide="1">
-      <div class="slide-inner text-center">
-        <div class="logo-mark">&#9889;</div>
-        <div class="hero-tag"><span class="dot-live"></span>AI-Powered Developer Tool &middot; YC Fall 2026</div>
-        <h1>Your APIs Break.<br><span class="gradient-text">ApiPatch Fixes Them.</span></h1>
-        <p class="lead mt-24" style="max-width:680px;margin-left:auto;margin-right:auto;">
-          The autonomous AI agent that detects third-party API breaking changes and opens ready-to-merge GitHub Pull Requests with refactored code &mdash; automatically.
+    <section class="slide" id="slide-1">
+      <div class="slide-inner">
+        <div class="tag">ApiPatch / Pre-Seed Pitch Deck</div>
+        <h1>Automating breaking API migrations<br><span class="accent-text">for modern codebases.</span></h1>
+        <p class="lead" style="max-width: 820px; margin-top: 16px;">
+          When third-party SDKs introduce breaking changes, codebases break silently. ApiPatch detects deprecated calls, fetches official documentation, rewrites the application logic, and validates syntax trees to open verified, ready-to-merge GitHub Pull Requests.
         </p>
-        <div class="flex gap-16 justify-center wrap mt-40">
-          <a href="https://github.com/MoradMoqbel/apipatch" class="btn btn-primary">&#9889; View on GitHub</a>
-          <a href="#slide-2" class="btn btn-ghost">See the Problem &rarr;</a>
+
+        <div class="grid grid-4" style="margin-top: 48px;">
+          <div class="card">
+            <div class="stat-num">v0.9.0</div>
+            <div class="stat-label">Published on PyPI (<span class="mono">pip install apipatch</span>)</div>
+          </div>
+          <div class="card">
+            <div class="stat-num">186 / 186</div>
+            <div class="stat-label">Unit tests passing (100% test suite)</div>
+          </div>
+          <div class="card">
+            <div class="stat-num">342k+ ★</div>
+            <div class="stat-label">Open-source star reach (CopilotKit, LiteLLM, Google)</div>
+          </div>
+          <div class="card">
+            <div class="stat-num">Python / TS</div>
+            <div class="stat-label">Multi-language AST validation support</div>
+          </div>
         </div>
-        <div class="hero-stats-row">
-          <div class="hero-stat"><span style="font-size:24px;">&#128721;</span><div><div class="hero-stat-val gradient-text">30%</div><div class="hero-stat-lbl">of cloud outages</div></div></div>
-          <div class="hero-stat"><span style="font-size:24px;">&#128230;</span><div><div class="hero-stat-val gradient-text">pip install</div><div class="hero-stat-lbl">apipatch &middot; PyPI</div></div></div>
-          <div class="hero-stat"><span style="font-size:24px;">&#127760;</span><div><div class="hero-stat-val gradient-text">Any Library</div><div class="hero-stat-lbl">Any Language</div></div></div>
-          <div class="hero-stat"><span style="font-size:24px;">&#9989;</span><div><div class="hero-stat-val gradient-text">87/87</div><div class="hero-stat-lbl">Tests Passing</div></div></div>
+
+        <div style="margin-top: 32px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted);">
+          Built by Morad Moqbel &middot; <a href="https://github.com/MoradMoqbel/apipatch" style="color: var(--accent); text-decoration: none;">github.com/MoradMoqbel/apipatch</a>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 2: THE PROBLEM -->
-    <section class="slide" id="slide-2" data-slide="2">
+    <section class="slide" id="slide-2">
       <div class="slide-inner">
-        <div class="slide-label">The Problem</div>
-        <h2>Silent API changes<br><span class="gradient-text-2">are breaking production</span></h2>
-        <div class="divider"></div>
-        <div class="flex gap-32 mt-40 wrap">
-          <div style="flex:1;min-width:300px;">
-            <p class="lead">Every time a major SDK ships &mdash; OpenAI v1.0, Pydantic v2, Stripe SCA, LangChain LCEL &mdash; engineering teams spend <strong style="color:var(--text)">days hunting broken calls</strong> and rewriting legacy code by hand.</p>
-            <div class="flex col gap-16 mt-32">
-              <div class="card flex gap-16 items-center"><span style="font-size:32px;">&#9203;</span><div><div style="font-size:22px;font-weight:800;">Days of downtime</div><div class="stat-label">wasted per breaking SDK release</div></div></div>
-              <div class="card flex gap-16 items-center"><span style="font-size:32px;">&#128293;</span><div><div style="font-size:22px;font-weight:800;">30% of cloud outages</div><div class="stat-label">caused by silent API breaking changes</div></div></div>
-              <div class="card flex gap-16 items-center"><span style="font-size:32px;">&#129318;</span><div><div style="font-size:22px;font-weight:800;">Dependabot fails you</div><div class="stat-label">only bumps version numbers &mdash; never fixes code</div></div></div>
+        <div class="tag tag-neutral">02 / The Problem</div>
+        <h2>Dependency upgrades break code.<br><span class="muted-text">Dependabot only bumps version numbers.</span></h2>
+        <p class="lead" style="margin-bottom: 28px;">
+          When major SDKs release breaking updates (OpenAI 1.0, Pydantic 2.0, Google GenAI), engineering teams spend days manually hunting deprecated calls across repositories.
+        </p>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="code-header">
+              <span>What automated tools do today</span>
+              <span>requirements.txt</span>
+            </div>
+            <div class="code-block" style="background: transparent; border: none; padding: 0;">
+              <div class="code-dim"># Dependabot updates the package definition</div>
+              <div class="code-red">- openai==0.28.0</div>
+              <div class="code-green">+ openai==1.50.0</div>
+              <br>
+              <div class="code-dim"># But your application code remains unchanged</div>
+              <div class="code-red">response = openai.ChatCompletion.create(</div>
+              <div class="code-red">    model="gpt-4", messages=[...]</div>
+              <div class="code-red">)</div>
+              <br>
+              <div class="code-dim"># Result: Runtime crash in production</div>
+              <div class="code-red">AttributeError: module 'openai' has no attribute 'ChatCompletion'</div>
             </div>
           </div>
-          <div style="flex:1;min-width:300px;">
-            <div class="code-block">
-              <div class="dot-row"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
-              <div class="code-dim"># Dependabot "fixes" your requirements.txt</div>
-              <div class="code-bad">- openai==0.28.0</div>
-              <div class="code-good">+ openai==1.50.0</div>
-              <br>
-              <div class="code-dim"># But your code is still broken at runtime</div>
-              <div class="code-bad">response = openai.ChatCompletion.create(</div>
-              <div class="code-bad">    model="gpt-4", messages=[...]</div>
-              <div class="code-bad">)</div>
-              <br>
-              <div class="code-dim"># AttributeError: module 'openai' has no</div>
-              <div class="code-dim"># attribute 'ChatCompletion'</div>
-              <div class="code-amber">&rarr; Production is DOWN &#128293;</div>
+
+          <div class="card" style="display: flex; flex-direction: column; justify-content: center; gap: 20px;">
+            <div>
+              <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px; color: #FFFFFF;">Silent Production Failures</div>
+              <div class="lead" style="font-size: 14px;">Version bumps pass simple CI checks if integration tests lack full coverage, only to crash at runtime when deprecated APIs are invoked.</div>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px; color: #FFFFFF;">High Engineering Grunt Work</div>
+              <div class="lead" style="font-size: 14px;">Engineers spend hours reading release notes, looking up renamed symbols, and modifying repetitive call sites by hand.</div>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px; color: #FFFFFF;">Blocked Security & Feature Updates</div>
+              <div class="lead" style="font-size: 14px;">Teams intentionally postpone necessary library upgrades for months because the refactoring overhead is too high.</div>
             </div>
           </div>
         </div>
@@ -189,171 +384,236 @@
     </section>
 
     <!-- SLIDE 3: THE SOLUTION -->
-    <section class="slide" id="slide-3" data-slide="3">
+    <section class="slide" id="slide-3">
       <div class="slide-inner">
-        <div class="slide-label">The Solution</div>
-        <h2>ApiPatch <span class="gradient-text">autonomously fixes</span><br>what humans hate doing</h2>
-        <div class="divider"></div>
-        <div class="flex gap-32 mt-40 wrap items-start">
-          <div style="flex:1;min-width:280px;">
-            <div class="step-list">
-              <div class="step-item"><div class="step-num">1</div><div class="step-body"><div class="step-title">&#128269; Detects Breaking Changes</div><div class="step-desc">Scans any Python/JS/TS codebase for deprecated API calls across any third-party library &mdash; no hardcoded rules needed.</div></div></div>
-              <div class="step-item"><div class="step-num">2</div><div class="step-body"><div class="step-title">&#127760; DocHunter&#8482; Live Grounding</div><div class="step-desc">Fetches official PyPI/npm/GitHub docs &amp; changelogs in &lt;0.1s to eliminate LLM hallucinations.</div></div></div>
-              <div class="step-item"><div class="step-num">3</div><div class="step-body"><div class="step-title">&#129302; LLM Refactoring Engine</div><div class="step-desc">Gemini 2.5 Flash Lite rewrites broken code with AST self-healing feedback loop &mdash; syntax-safe, logic-preserving.</div></div></div>
-              <div class="step-item"><div class="step-num">4</div><div class="step-body"><div class="step-title">&#9989; Opens Ready-to-Merge PRs</div><div class="step-desc">Auto-forks, commits atomically via GitHub API, and opens real Pull Requests engineers can review in seconds.</div></div></div>
+        <div class="tag tag-neutral">03 / The Solution</div>
+        <h2>End-to-end refactoring with AST verification.</h2>
+        <p class="lead" style="margin-bottom: 28px;">
+          ApiPatch bridges the gap between version detection and code refactoring by autonomously generating syntactic and semantic fixes.
+        </p>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="code-header">
+              <span>Terminal Execution</span>
+              <span>apipatch pr owner/repo</span>
+            </div>
+            <div class="code-block" style="background: transparent; border: none; padding: 0;">
+              <div class="code-cyan">$ apipatch pr patchy631/ai-engineering-hub</div>
+              <br>
+              <div class="code-dim">[1/5] Auditing repository dependencies...</div>
+              <div class="code-dim">[2/5] Deprecation detected: google-generativeai -> google-genai</div>
+              <div class="code-dim">[3/5] Fetching official migration guide via DocHunter...</div>
+              <div class="code-dim">[4/5] Refactoring code with AST self-healing validation...</div>
+              <div class="code-green">[PASS] Python AST parsed with zero syntax errors.</div>
+              <div class="code-dim">[5/5] Creating fork and atomic commit...</div>
+              <br>
+              <div class="code-green">[DONE] Pull Request opened: #261 (100% pre-merge checks passed)</div>
             </div>
           </div>
-          <div style="flex:1;min-width:280px;">
-            <div class="code-block">
-              <div class="dot-row"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
-              <div class="code-dim"># ApiPatch fixes everything automatically</div>
-              <br>
-              <div class="code-good">$ apipatch pr owner/repo</div>
-              <br>
-              <div class="code-cyan">&#128269; Scanning repository...</div>
-              <div class="code-cyan">&#127760; DocHunter: fetching openai changelog...</div>
-              <div class="code-cyan">&#129302; LLM: rewriting 3 deprecated calls...</div>
-              <div class="code-cyan">&#129658; AST validation: PASSED</div>
-              <div class="code-cyan">&#128228; Committing via GitHub API...</div>
-              <div class="code-good">&#9989; PR opened: #47 &mdash; Migrate to openai v1.x</div>
-              <br>
-              <div class="code-purple"># BEFORE</div>
-              <div class="code-bad">response = openai.ChatCompletion.create(...)</div>
-              <br>
-              <div class="code-purple"># AFTER</div>
-              <div class="code-good">client = openai.OpenAI()</div>
-              <div class="code-good">response = client.chat.completions.create(...)</div>
+
+          <div class="card card-accent" style="display: flex; flex-direction: column; justify-content: center; gap: 16px;">
+            <div>
+              <div style="font-weight: 600; font-size: 15px; color: var(--accent); margin-bottom: 4px;">1. Grounded Documentation Retrieval</div>
+              <div class="lead" style="font-size: 13.5px;">Queries official package registries and changelogs before generating code, preventing LLM hallucinations about API signatures.</div>
+            </div>
+            <div>
+              <div style="font-weight: 600; font-size: 15px; color: var(--accent); margin-bottom: 4px;">2. Syntax Tree Self-Healing Loop</div>
+              <div class="lead" style="font-size: 13.5px;">Every refactored block must pass abstract syntax tree (AST) validation. If a syntax error is introduced, the engine corrects it automatically.</div>
+            </div>
+            <div>
+              <div style="font-weight: 600; font-size: 15px; color: var(--accent); margin-bottom: 4px;">3. Non-Destructive Subproject Scope</div>
+              <div class="lead" style="font-size: 13.5px;">Only modifies targeted subdirectories and related manifests, keeping surrounding files completely untouched.</div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- SLIDE 4: HOW IT WORKS -->
-    <section class="slide" id="slide-4" data-slide="4">
+    <!-- SLIDE 4: ARCHITECTURE -->
+    <section class="slide" id="slide-4">
       <div class="slide-inner">
-        <div class="slide-label">How It Works</div>
-        <h2>The <span class="gradient-text">Full Pipeline</span></h2>
-        <div class="divider"></div>
-        <div class="flow mt-48">
-          <div class="flow-node"><span class="fn-icon">&#128225;</span><div>Push Event</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Webhook / CLI</div></div>
-          <div class="flow-arrow">&rarr;</div>
-          <div class="flow-node"><span class="fn-icon">&#128269;</span><div>Scan Files</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Parallel threads</div></div>
-          <div class="flow-arrow">&rarr;</div>
-          <div class="flow-node"><span class="fn-icon">&#127760;</span><div>DocHunter&#8482;</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Live docs &lt;0.1s</div></div>
-          <div class="flow-arrow">&rarr;</div>
-          <div class="flow-node"><span class="fn-icon">&#129302;</span><div>LLM Fix</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Gemini 2.5</div></div>
-          <div class="flow-arrow">&rarr;</div>
-          <div class="flow-node"><span class="fn-icon">&#129658;</span><div>AST Heal</div><div style="font-size:11px;color:var(--muted);margin-top:4px;">Self-healing</div></div>
-          <div class="flow-arrow">&rarr;</div>
-          <div class="flow-node success"><span class="fn-icon">&#9989;</span><div>PR Opened</div><div style="font-size:11px;color:var(--green);margin-top:4px;">Ready to merge</div></div>
+        <div class="tag tag-neutral">04 / Architecture</div>
+        <h2>A deterministic migration pipeline.</h2>
+        <p class="lead" style="margin-bottom: 32px;">
+          Designed to ensure that every pull request submitted is safe, syntactically sound, and directly reviewable by maintainers.
+        </p>
+
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-num">STEP 01</div>
+            <div class="flow-title">Repository Ingestion</div>
+            <div class="flow-desc">Parses package manifests (requirements.txt, package.json) and scans source files in parallel.</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">STEP 02</div>
+            <div class="flow-title">Doc Retrieval</div>
+            <div class="flow-desc">Pulls exact migration notes and changelogs from verified package registries and repositories.</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">STEP 03</div>
+            <div class="flow-title">Refactor Engine</div>
+            <div class="flow-desc">LLM transforms deprecated invocations into modern client calls following official migration specs.</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">STEP 04</div>
+            <div class="flow-title">AST Validation</div>
+            <div class="flow-desc">Validates the code structure using language parsers (ast module in Python, Babel in JS/TS).</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-num">STEP 05</div>
+            <div class="flow-title">Atomic PR</div>
+            <div class="flow-desc">Creates a clean branch, commits changes atomically via GitHub API, and provides a structured report.</div>
+          </div>
         </div>
-        <div class="card-grid card-grid-3 mt-48">
-          <div class="card"><div style="font-size:32px;margin-bottom:12px;">&#9889;</div><h3>10x Faster</h3><p class="lead mt-8" style="font-size:15px;">Multi-threaded parallel file scanning with ThreadPoolExecutor for entire repositories</p></div>
-          <div class="card"><div style="font-size:32px;margin-bottom:12px;">&#127760;</div><h3>Any Library</h3><p class="lead mt-8" style="font-size:15px;">No hardcoded rules &mdash; LLM engine handles any SDK in Python, JS, TS, JSX, TSX</p></div>
-          <div class="card"><div style="font-size:32px;margin-bottom:12px;">&#128737;</div><h3>Zero Hallucinations</h3><p class="lead mt-8" style="font-size:15px;">DocHunter&#8482; grounds every fix in official docs + AST validator catches all syntax errors</p></div>
+
+        <div class="card" style="margin-top: 24px; padding: 20px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted);">
+            <strong style="color: var(--text);">Key Architectural Principle:</strong> ApiPatch treats LLM outputs as untrusted candidates. Code is only committed after passing static grammar validation and AST equivalence checks.
+          </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 5: MARKET -->
-    <section class="slide" id="slide-5" data-slide="5">
+    <section class="slide" id="slide-5">
       <div class="slide-inner">
-        <div class="slide-label">Market Opportunity</div>
-        <h2>A <span class="gradient-text">$10B+ market</span><br>with no real solution today</h2>
-        <div class="divider"></div>
-        <div class="flex gap-48 mt-40 wrap items-center">
-          <div style="flex:1;min-width:280px;">
-            <div class="flex col gap-24">
-              <div><div class="stat-num gradient-text">$10B+</div><div class="stat-label">TAM &mdash; Software Maintenance &amp; API Integration Tools</div><div class="progress-bar mt-12"><div class="progress-fill" style="--target:100%"></div></div></div>
-              <div><div class="stat-num gradient-text-2">250M+</div><div class="stat-label">GitHub repositories potentially impacted by breaking APIs</div><div class="progress-bar mt-12"><div class="progress-fill" style="--target:80%"></div></div></div>
-              <div><div class="stat-num gradient-text">30%</div><div class="stat-label">of cloud outages traced to silent third-party API changes</div><div class="progress-bar mt-12"><div class="progress-fill" style="--target:30%"></div></div></div>
-            </div>
+        <div class="tag tag-neutral">05 / Market Opportunity</div>
+        <h2>Maintaining external code dependencies is a continuous cost.</h2>
+        <p class="lead" style="margin-bottom: 28px;">
+          As software shifts to API-first architectures and AI SDKs, library velocity is higher than ever, creating continuous maintenance overhead.
+        </p>
+
+        <div class="grid grid-3">
+          <div class="card">
+            <div class="stat-num">$10B+</div>
+            <div class="stat-label">Software maintenance & developer productivity market</div>
+            <p class="lead" style="font-size: 13px; margin-top: 12px;">Engineering teams spend up to 20% of their bandwidth refactoring existing integrations rather than building core features.</p>
           </div>
-          <div style="flex:1;min-width:300px;">
-            <div class="card-grid card-grid-2 gap-16">
-              <div class="card"><div class="badge badge-cyan mb-16">Free Tier</div><div style="font-size:28px;font-weight:800;">Open Source</div><p class="lead mt-8" style="font-size:14px;">All public repos + CLI &mdash; drives developer adoption &amp; GitHub traction</p></div>
-              <div class="card" style="border-color:rgba(0,245,255,0.2)"><div class="badge badge-purple mb-16">SaaS</div><div style="font-size:28px;font-weight:800;">$29<span style="font-size:14px;color:var(--muted)">/dev/mo</span></div><p class="lead mt-8" style="font-size:14px;">Private repos, priority support, team dashboards</p></div>
-              <div class="card" style="grid-column:span 2"><div class="badge badge-amber mb-16">Enterprise / API Vendors</div><div style="font-size:22px;font-weight:800;">API Vendor Tier</div><p class="lead mt-8" style="font-size:14px;">Stripe, Shopify, Twilio pay a monthly fee to maintain auto-update agents for their own SDKs &mdash; ensuring <strong style="color:var(--text)">0% developer churn</strong> on every major release</p></div>
-            </div>
+          <div class="card">
+            <div class="stat-num">250M+</div>
+            <div class="stat-label">Repositories hosted across GitHub</div>
+            <p class="lead" style="font-size: 13px; margin-top: 12px;">Every repository using active dependencies experiences deprecation cycles several times each year.</p>
+          </div>
+          <div class="card">
+            <div class="stat-num">3 Revenue Tiers</div>
+            <div class="stat-label">Commercialization model</div>
+            <p class="lead" style="font-size: 13px; margin-top: 12px;">Open-source CLI for developers, $29/dev/mo team SaaS for private codebases, and Enterprise contracts for API vendors.</p>
+          </div>
+        </div>
+
+        <div class="card card-accent" style="margin-top: 20px; padding: 18px 24px;">
+          <div style="font-weight: 600; font-size: 14px; color: var(--accent);">The API Vendor Opportunity</div>
+          <div class="lead" style="font-size: 13.5px; margin-top: 4px;">
+            API providers (Stripe, Twilio, OpenAI) suffer major customer friction whenever they release breaking SDKs. ApiPatch enables providers to sponsor automated migration pull requests directly into their customers' repositories, eliminating upgrade drop-off.
           </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 6: COMPETITION -->
-    <section class="slide" id="slide-6" data-slide="6">
+    <section class="slide" id="slide-6">
       <div class="slide-inner">
-        <div class="slide-label">Competitive Landscape</div>
-        <h2>Nobody else <span class="gradient-text">fixes the code</span></h2>
-        <div class="divider"></div>
-        <div class="mt-40">
-          <table class="compare-table">
+        <div class="tag tag-neutral">06 / Competitive Landscape</div>
+        <h2>Moving from notification to resolution.</h2>
+        <p class="lead" style="margin-bottom: 24px;">
+          Existing tools either stop at updating package manifests or require engineers to write complex custom codemod scripts.
+        </p>
+
+        <div class="table-container">
+          <table>
             <thead>
               <tr>
-                <th>Feature</th>
-                <th>Dependabot</th>
-                <th>Renovate</th>
-                <th>Grit.io</th>
-                <th class="highlight">&#9889; ApiPatch</th>
+                <th>Capability</th>
+                <th>Dependabot / Renovate</th>
+                <th>Manual Codemods (Grit/jscodeshift)</th>
+                <th>AI Copilots (Cursor/Copilot)</th>
+                <th class="highlight">ApiPatch</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>Bumps version numbers</td><td><span class="check">&#10003;</span></td><td><span class="check">&#10003;</span></td><td><span class="partial">~</span></td><td class="highlight"><span class="check">&#10003;</span></td></tr>
-              <tr><td>Rewrites application code logic</td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td><span class="partial">~</span> Manual GritQL</td><td class="highlight"><span class="check">&#10003;</span> Fully automatic</td></tr>
-              <tr><td>Live official doc grounding</td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td class="highlight"><span class="check">&#10003;</span> DocHunter&#8482;</td></tr>
-              <tr><td>Opens ready-to-merge PRs</td><td><span class="partial">~</span> version bump only</td><td><span class="partial">~</span> version bump only</td><td><span class="cross">&#10007;</span></td><td class="highlight"><span class="check">&#10003;</span> Full refactoring</td></tr>
-              <tr><td>Any library &mdash; zero config</td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td class="highlight"><span class="check">&#10003;</span> LLM-powered</td></tr>
-              <tr><td>AST self-healing validation</td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td><span class="cross">&#10007;</span></td><td class="highlight"><span class="check">&#10003;</span></td></tr>
+              <tr>
+                <td>Updates manifest version</td>
+                <td>Yes</td>
+                <td>No</td>
+                <td>Manual</td>
+                <td class="highlight">Yes</td>
+              </tr>
+              <tr>
+                <td>Refactors application source code</td>
+                <td>No</td>
+                <td>Yes (Requires writing custom DSL rules)</td>
+                <td>Interactive (Line-by-line prompting)</td>
+                <td class="highlight">Autonomous</td>
+              </tr>
+              <tr>
+                <td>Retrieves live official docs</td>
+                <td>No</td>
+                <td>No</td>
+                <td>Prompt dependent</td>
+                <td class="highlight">Automatic via DocHunter</td>
+              </tr>
+              <tr>
+                <td>Syntax tree (AST) validation</td>
+                <td>No</td>
+                <td>Manual rule validation</td>
+                <td>No</td>
+                <td class="highlight">Built-in self-healing</td>
+              </tr>
+              <tr>
+                <td>Ready-to-merge GitHub Pull Request</td>
+                <td>Manifest only</td>
+                <td>No</td>
+                <td>No</td>
+                <td class="highlight">Full codebase PR</td>
+              </tr>
             </tbody>
           </table>
-        </div>
-        <div class="card mt-32" style="border-color:rgba(0,245,255,0.2);background:rgba(0,245,255,0.04)">
-          <div style="font-size:18px;font-weight:700;color:var(--cyan)">&#128161; Our unfair advantage</div>
-          <p class="lead mt-8" style="font-size:16px">Tools like Dependabot &amp; Renovate <strong style="color:var(--text)">notify</strong> about broken APIs. ApiPatch <strong style="color:var(--cyan)">fixes them</strong>. That's the entire moat.</p>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 7: TRACTION -->
-    <section class="slide" id="slide-7" data-slide="7">
+    <section class="slide" id="slide-7">
       <div class="slide-inner">
-        <div class="slide-label">Traction &amp; Proof</div>
-        <h2>Built, shipped, <span class="gradient-text">and live</span></h2>
-        <div class="divider"></div>
-        <div class="card-grid card-grid-4 mt-40">
-          <div class="card text-center"><div class="stat-num gradient-text">v0.9.0</div><div class="stat-label">Current version on PyPI</div></div>
-          <div class="card text-center"><div class="stat-num gradient-text">162/162</div><div class="stat-label">Tests passing (100%)</div></div>
-          <div class="card text-center"><div class="stat-num gradient-text">6</div><div class="stat-label">CLI commands shipped</div></div>
-          <div class="card text-center"><div class="stat-num gradient-text">5+</div><div class="stat-label">Languages supported</div></div>
-        </div>
-        <div class="card-grid card-grid-2 mt-24">
-          <div class="card">
-            <div class="badge badge-green mb-16">&#9989; Shipped</div>
-            <div class="flex col gap-12">
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>PyPI: <code class="mono" style="color:var(--cyan)">pip install apipatch</code></span></div>
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>GitHub Actions CI/CD integration</span></div>
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Docker webhook daemon</span></div>
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Autonomous PR pipeline</span></div>
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Smart repository discovery engine</span></div>
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>AST self-healing feedback loop</span></div>
-              <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Anonymous telemetry (PostHog)</span></div>
+        <div class="tag tag-neutral">07 / Traction & Validation</div>
+        <h2>Real software, validated in production repositories.</h2>
+        <p class="lead" style="margin-bottom: 28px;">
+          ApiPatch is not a prototype; it is actively running and validated against live, high-traffic open-source repositories.
+        </p>
+
+        <div class="grid grid-2">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 700; font-size: 17px; margin-bottom: 8px; color: #FFFFFF;">Live Pull Request Validation: patchy631/ai-engineering-hub</div>
+              <p class="lead" style="font-size: 14px; margin-bottom: 16px;">
+                Migrated the <span class="mono">video-rag-gemini</span> subproject in a 37,500-star repository from legacy <span class="mono">google-generativeai</span> to Google's official <span class="mono">google-genai</span> SDK.
+              </p>
+              <div class="code-block" style="font-size: 12px; padding: 16px;">
+                <div class="code-green">CodeRabbit Automated Review on PR #261:</div>
+                <div class="code-dim">- Pre-merge checks: 5/5 PASSED</div>
+                <div class="code-dim">- Merge risk: MINIMAL</div>
+                <div class="code-dim">- Conflicts with base branch: NONE</div>
+                <div class="code-green">- "No actionable comments were generated in the recent review."</div>
+              </div>
+            </div>
+            <div style="margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent);">
+              Status: PR #261 open, cleanly mergeable.
             </div>
           </div>
-          <div class="card">
-            <div class="badge badge-purple mb-16">&#128203; CLI Commands</div>
-            <div class="code-block" style="font-size:12px;padding:16px">
-              <div class="code-cyan">apipatch scan ./my_project</div>
-              <div class="code-dim"># Audit any local codebase</div>
-              <br>
-              <div class="code-cyan">apipatch pr owner/repo</div>
-              <div class="code-dim"># Full autonomous PR pipeline</div>
-              <br>
-              <div class="code-cyan">apipatch discover "topic:ai" --days 30</div>
-              <div class="code-dim"># Find trending repos &amp; audit them</div>
-              <br>
-              <div class="code-cyan">apipatch webhook --port 8080</div>
-              <div class="code-dim"># Continuous GitHub App daemon</div>
+
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 700; font-size: 17px; margin-bottom: 8px; color: #FFFFFF;">Engineering Milestones Completed</div>
+              <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+                <li style="font-size: 13.5px; color: var(--muted);"><strong style="color: var(--text);">PyPI Release:</strong> Package published and installable (<span class="mono" style="color: var(--accent);">pip install apipatch</span>).</li>
+                <li style="font-size: 13.5px; color: var(--muted);"><strong style="color: var(--text);">Comprehensive Testing:</strong> 186 automated unit tests with 100% pass rate.</li>
+                <li style="font-size: 13.5px; color: var(--muted);"><strong style="color: var(--text);">Organic Registry Discovery:</strong> Automatically indexed by agent registries (Skillful) based on PyPI adoption.</li>
+                <li style="font-size: 13.5px; color: var(--muted);"><strong style="color: var(--text);">CI/CD & Daemon:</strong> Complete Docker daemon and GitHub Actions integration ready for teams.</li>
+              </ul>
+            </div>
+            <div style="margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);">
+              Current version: v0.9.0
             </div>
           </div>
         </div>
@@ -361,93 +621,115 @@
     </section>
 
     <!-- SLIDE 8: ROADMAP -->
-    <section class="slide" id="slide-8" data-slide="8">
+    <section class="slide" id="slide-8">
       <div class="slide-inner">
-        <div class="slide-label">Roadmap</div>
-        <h2>90 days to <span class="gradient-text">real traction</span></h2>
-        <div class="divider"></div>
-        <div class="flex gap-48 mt-40 wrap">
-          <div style="flex:1;min-width:280px;">
-            <div class="timeline">
-              <div class="tl-item done"><div class="tl-phase">Week 0 &middot; Done</div><div class="tl-title">MVP &amp; PyPI Launch</div><div class="tl-desc">Working CLI, AST validator, GitHub PR pipeline, 87 tests</div></div>
-              <div class="tl-item done"><div class="tl-phase">Week 1 &middot; Done</div><div class="tl-title">GitHub Actions + Docker</div><div class="tl-desc">Webhook daemon, CI/CD integration, parallel auditing</div></div>
-              <div class="tl-item"><div class="tl-phase">Month 1 &middot; Next</div><div class="tl-title">Proactive PR Campaign</div><div class="tl-desc">Open PRs on 10-15 real open-source repos. Hacker News Show HN launch</div></div>
-              <div class="tl-item"><div class="tl-phase">Month 2</div><div class="tl-title">GitHub App Beta</div><div class="tl-desc">One-click install, per-push scanning, first paying customers</div></div>
-              <div class="tl-item"><div class="tl-phase">Month 3</div><div class="tl-title">Enterprise &amp; API Vendor Deals</div><div class="tl-desc">Pitch Stripe / Shopify / Twilio for SDK maintenance contracts</div></div>
-            </div>
+        <div class="tag tag-neutral">08 / Roadmap</div>
+        <h2>Execution milestones for the next 90 days.</h2>
+        <p class="lead" style="margin-bottom: 28px;">
+          Focusing strictly on expanding distribution, developer adoption, and establishing our first commercial pilots.
+        </p>
+
+        <div class="grid grid-3">
+          <div class="card">
+            <div class="flow-num">CURRENT / MONTH 1</div>
+            <div style="font-size: 16px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px;">Targeted PR Campaign</div>
+            <p class="lead" style="font-size: 13.5px;">
+              Submit verified migration PRs across top 20 popular repositories with known deprecated dependencies (OpenAI, LangChain, Google GenAI). Drive organic awareness through merged contributions.
+            </p>
           </div>
-          <div style="flex:1;min-width:280px;">
-            <div style="font-size:16px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:24px;">90-Day KPIs</div>
-            <div class="flex col gap-20">
-              <div><div class="flex justify-between items-center"><span style="font-weight:600;">GitHub &#11088; Stars</span><span class="gradient-text" style="font-weight:800;">200+</span></div><div class="progress-bar mt-8"><div class="progress-fill" style="--target:70%"></div></div></div>
-              <div><div class="flex justify-between items-center"><span style="font-weight:600;">PRs merged in external repos</span><span class="gradient-text" style="font-weight:800;">20+</span></div><div class="progress-bar mt-8"><div class="progress-fill" style="--target:55%"></div></div></div>
-              <div><div class="flex justify-between items-center"><span style="font-weight:600;">Developers using CLI</span><span class="gradient-text" style="font-weight:800;">100+</span></div><div class="progress-bar mt-8"><div class="progress-fill" style="--target:40%"></div></div></div>
-              <div><div class="flex justify-between items-center"><span style="font-weight:600;">Waitlist emails</span><span class="gradient-text" style="font-weight:800;">150+</span></div><div class="progress-bar mt-8"><div class="progress-fill" style="--target:30%"></div></div></div>
-              <div><div class="flex justify-between items-center"><span style="font-weight:600;">Revenue target (MRR)</span><span class="gradient-text" style="font-weight:800;">$2,900+</span></div><div class="progress-bar mt-8"><div class="progress-fill" style="--target:20%"></div></div></div>
-            </div>
+          <div class="card">
+            <div class="flow-num">MONTH 2</div>
+            <div style="font-size: 16px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px;">GitHub App Launch</div>
+            <p class="lead" style="font-size: 13.5px;">
+              Launch a one-click GitHub Marketplace application. Provides continuous background monitoring and automated PR generation on every upstream breaking change release.
+            </p>
+          </div>
+          <div class="card">
+            <div class="flow-num">MONTH 3</div>
+            <div style="font-size: 16px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px;">Enterprise SDK Pilots</div>
+            <p class="lead" style="font-size: 13.5px;">
+              Initiate commercial pilot discussions with developer platform vendors seeking to reduce customer churn when shipping major API breaking changes.
+            </p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px; padding: 20px;">
+          <div class="grid grid-4" style="text-align: center;">
+            <div><div style="font-size: 20px; font-weight: 700; color: #FFFFFF;">20+</div><div class="stat-label">Merged open-source PRs</div></div>
+            <div><div style="font-size: 20px; font-weight: 700; color: #FFFFFF;">500+</div><div class="stat-label">Developers using CLI</div></div>
+            <div><div style="font-size: 20px; font-weight: 700; color: #FFFFFF;">1-Click</div><div class="stat-label">GitHub App installation</div></div>
+            <div><div style="font-size: 20px; font-weight: 700; color: #FFFFFF;">First 5</div><div class="stat-label">Enterprise design partners</div></div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 9: TEAM -->
-    <section class="slide" id="slide-9" data-slide="9">
+    <section class="slide" id="slide-9">
       <div class="slide-inner">
-        <div class="slide-label">The Founder</div>
-        <h2>Built by a <span class="gradient-text">solo technical</span> founder</h2>
-        <div class="divider"></div>
-        <div class="mt-40">
-          <div class="founder-card">
-            <div class="founder-avatar">&#129489;&#8205;&#128187;</div>
-            <div style="flex:1">
-              <h3 style="font-size:28px;">Morad Moqbel</h3>
-              <div style="color:var(--muted);font-size:15px;margin-top:4px;">Founder &amp; CEO &middot; ApiPatch &middot; Ibb, Yemen</div>
-              <div class="flex gap-8 wrap mt-16">
-                <span class="badge badge-cyan">Solo Technical Founder</span>
-                <span class="badge badge-purple">Python &middot; Node.js &middot; AI/LLMs</span>
-                <span class="badge badge-green">Applying: YC Fall 2026</span>
+        <div class="tag tag-neutral">09 / The Founder</div>
+        <h2>Technical execution with high velocity.</h2>
+        <p class="lead" style="margin-bottom: 28px;">
+          ApiPatch is built by a solo technical founder who understands the pain point from direct engineering experience.
+        </p>
+
+        <div class="card" style="padding: 36px;">
+          <div style="display: flex; gap: 32px; align-items: flex-start;">
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <h3 style="font-size: 24px; font-weight: 800; color: #FFFFFF;">Morad Moqbel</h3>
+                <span class="tag tag-neutral" style="margin: 0;">Founder & Software Engineer</span>
               </div>
-              <div class="flex col gap-12 mt-24">
-                <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Built full MVP &mdash; PyPI + CLI + Docker + CI/CD &mdash; in days, not months</span></div>
-                <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Deep expertise in AI agents, GitHub API, AST manipulation, multi-LLM orchestration</span></div>
-                <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Ships fast &mdash; 87 passing tests, full documentation, production-ready architecture</span></div>
-                <div class="flex gap-10 items-center"><span class="check">&#10003;</span><span>Identified this pain from YC Fall 2026 Requests for Startups (Harsha Gaddipati)</span></div>
+              <div style="font-size: 14px; color: var(--muted); margin-top: 4px;">Based in Ibb, Yemen &middot; Solo Technical Founder</div>
+
+              <div class="lead" style="font-size: 14.5px; margin-top: 20px; line-height: 1.7;">
+                I built ApiPatch because I experienced the frustration of broken dependencies firsthand. Tools like Dependabot alert developers to new versions but leave them stranded with broken application code.
+                <br><br>
+                Working independently, I built the entire system from scratch: the CLI architecture, the DocHunter documentation retriever, the multi-LLM transformation layer, the AST grammar validator, and the GitHub API integration—backed by 186 passing tests.
+                <br><br>
+                My focus is pure execution: shipping clean, reliable tools that solve real technical debt for developers worldwide.
               </div>
             </div>
-          </div>
-          <div class="card mt-24" style="border-color:rgba(168,85,247,0.25);background:rgba(124,58,237,0.06)">
-            <div style="font-size:16px;font-weight:700;color:var(--purple2);margin-bottom:8px;">&#127942; Why solo works here</div>
-            <p class="lead" style="font-size:15px">ApiPatch is a pure engineering product with a clear distribution moat: proactive PRs on open-source repos. The founder can execute the entire strategy alone with API credits. A co-founder search is underway for GTM and enterprise sales.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 10: THE ASK -->
-    <section class="slide" id="slide-10" data-slide="10">
-      <div class="slide-inner text-center">
-        <div class="slide-label">The Ask</div>
-        <h2>Join the <span class="gradient-text">self-maintaining</span><br>codebase revolution</h2>
-        <div class="divider" style="margin:24px auto"></div>
-        <p class="lead" style="max-width:640px;margin:0 auto">We're raising a pre-seed to accelerate distribution, build the GitHub App, and sign the first enterprise API vendor contracts.</p>
-        <div class="flex gap-32 justify-center wrap mt-48">
-          <div style="text-align:center">
-            <div class="ask-ring"><div><div class="gradient-text" style="font-size:38px;font-weight:900">$500K</div><div style="font-size:14px;color:var(--muted)">Pre-seed</div></div></div>
+    <section class="slide" id="slide-10">
+      <div class="slide-inner">
+        <div class="tag">10 / The Ask</div>
+        <h2>Raising $500K Pre-Seed.</h2>
+        <p class="lead" style="margin-bottom: 32px;">
+          To scale engineering, launch the GitHub App marketplace integration, and establish our first B2B developer partnerships.
+        </p>
+
+        <div class="grid grid-3">
+          <div class="card">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin-bottom: 6px;">50% ALLOCATION</div>
+            <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px;">Engineering & Parsers</div>
+            <p class="lead" style="font-size: 13.5px;">Expand AST parser coverage to Go and Rust, refine the self-healing transformation engine, and finalize the hosted GitHub App.</p>
           </div>
-          <div style="flex:1;min-width:280px;text-align:left">
-            <div class="flex col gap-20">
-              <div class="card"><div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--cyan);margin-bottom:8px;">40%</div><div style="font-weight:600">Engineering</div><div style="font-size:14px;color:var(--muted)">GitHub App, multi-tenant SaaS, enterprise API</div></div>
-              <div class="card"><div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--purple2);margin-bottom:8px;">35%</div><div style="font-weight:600">Growth &amp; Distribution</div><div style="font-size:14px;color:var(--muted)">Community, developer relations, open-source PRs campaign</div></div>
-              <div class="card"><div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:8px;">25%</div><div style="font-weight:600">Operations &amp; GTM</div><div style="font-size:14px;color:var(--muted)">SF relocation, enterprise sales, legal entity</div></div>
-            </div>
+          <div class="card">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin-bottom: 6px;">25% ALLOCATION</div>
+            <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px;">Sandboxed Infrastructure</div>
+            <p class="lead" style="font-size: 13.5px;">Deploy isolated execution containers to run full test suites against refactored code before PR generation, ensuring zero regressions.</p>
+          </div>
+          <div class="card">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); margin-bottom: 6px;">25% ALLOCATION</div>
+            <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px;">GTM & Distribution</div>
+            <p class="lead" style="font-size: 13.5px;">Scale the proactive PR campaign, build developer relations, and pursue pilot contracts with major API providers.</p>
           </div>
         </div>
-        <div class="flex gap-16 justify-center wrap mt-48">
-          <a href="https://github.com/MoradMoqbel/apipatch" class="btn btn-primary">&#9889; See it on GitHub</a>
-          <a href="mailto:morad@apipatch.dev" class="btn btn-ghost">&#128140; Contact Morad</a>
-        </div>
-        <div class="hero-stats-row mt-32">
-          <div class="hero-stat"><div><div class="hero-stat-val gradient-text">pip install apipatch</div><div class="hero-stat-lbl">Try it now &middot; Free &middot; Open Source</div></div></div>
+
+        <div class="card card-accent" style="margin-top: 32px; padding: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+          <div>
+            <div style="font-size: 20px; font-weight: 700; color: #FFFFFF;">Let's discuss ApiPatch</div>
+            <div class="lead" style="font-size: 14px; margin-top: 4px;">Available for a 15-minute introductory call and technical demonstration.</div>
+          </div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent);">
+            Email: <a href="mailto:moradyunes2@gmail.com" style="color: var(--accent); text-decoration: underline;">moradyunes2@gmail.com</a> &middot; GitHub: <a href="https://github.com/MoradMoqbel" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">MoradMoqbel</a>
+          </div>
         </div>
       </div>
     </section>
@@ -457,33 +739,38 @@
   <script>
     const slides = document.querySelectorAll('.slide');
     const navDots = document.getElementById('navDots');
-    const slideCounter = document.getElementById('slideCounter');
+    const counter = document.getElementById('counter');
+
     slides.forEach((slide, i) => {
       const btn = document.createElement('button');
       btn.className = 'nav-dot';
       btn.title = 'Slide ' + (i + 1);
-      btn.addEventListener('click', () => slide.scrollIntoView({behavior:'smooth',block:'start'}));
+      btn.addEventListener('click', () => slide.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       navDots.appendChild(btn);
     });
+
     const dots = navDots.querySelectorAll('.nav-dot');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
           const idx = Array.from(slides).indexOf(entry.target);
           dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-          slideCounter.textContent = (idx + 1) + ' / ' + slides.length;
+          counter.textContent = String(idx + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
         }
       });
-    }, { threshold: 0.15 });
+    }, { threshold: 0.2 });
+
     slides.forEach(slide => observer.observe(slide));
+
     document.addEventListener('keydown', (e) => {
       const active = document.querySelector('.nav-dot.active');
       const idx = Array.from(dots).indexOf(active);
-      if ((e.key === 'ArrowDown' || e.key === 'ArrowRight') && idx < slides.length - 1)
-        slides[idx + 1].scrollIntoView({behavior:'smooth',block:'start'});
-      if ((e.key === 'ArrowUp' || e.key === 'ArrowLeft') && idx > 0)
-        slides[idx - 1].scrollIntoView({behavior:'smooth',block:'start'});
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowRight') && idx < slides.length - 1) {
+        slides[idx + 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if ((e.key === 'ArrowUp' || e.key === 'ArrowLeft') && idx > 0) {
+        slides[idx - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
   </script>
 </body>

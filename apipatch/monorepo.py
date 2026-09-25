@@ -120,10 +120,9 @@ class MonorepoManager:
     def is_monorepo(cls, subprojects: Dict[str, Dict[str, Any]]) -> bool:
         """
         Returns True if the repository has multiple independent sub-projects
-        or at least one non-root subproject with its own manifest.
+        or workspaces (at least 2 distinct project roots).
         """
-        non_root_subprojects = [d for d in subprojects.keys() if d != ""]
-        return len(non_root_subprojects) >= 1 and (len(subprojects) > 1 or len(non_root_subprojects) >= 1)
+        return len(subprojects) >= 2
 
     @classmethod
     def resolve_scoped_title(

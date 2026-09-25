@@ -85,7 +85,7 @@ class TestPRSubmitter(unittest.TestCase):
         
         # Test default with scope prefix
         payload_scope = GitHubClient.generate_pr_markdown("owner/repo", audit_results, scope_prefix="[Beifong] ")
-        self.assertEqual(payload_scope["title"], "[Beifong] [ApiPatch] Migrate deprecated pydantic API calls (1 file)")
+        self.assertEqual(payload_scope["title"], "refactor(beifong): migrate deprecated pydantic API calls (1 file)")
         
         # Test custom title override
         payload_custom = GitHubClient.generate_pr_markdown("owner/repo", audit_results, custom_title="[Beifong] Modernize Pydantic v2")
@@ -155,7 +155,7 @@ class TestPRSubmitter(unittest.TestCase):
         )
 
         self.assertEqual(res["status"], "preview")
-        self.assertIn("[Rag_tutorials]", res["title"])
+        self.assertIn("rag_tutorials", res["title"])
 
     @patch.object(GitHubPRHunter, "get_authenticated_user")
     @patch.object(GitHubPRHunter, "get_default_branch")

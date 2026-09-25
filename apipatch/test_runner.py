@@ -6,9 +6,46 @@ to verify that refactored code passes all unit and integration tests.
 
 import os
 import sys
+import re
 import json
+import tempfile
 import subprocess
 from typing import Tuple, Optional
+
+
+_RE_MOD_PATH = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$")
+_RE_ATTR_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+_SANDBOX_EVAL_SCRIPT = """
+import sys
+import os
+import json
+import importlib
+
+# Isolate sys.path from current directory and local repository scripts
+clean_path = [p for p in sys.path if p and p not in ('', '.', os.getcwd())]
+sys.path = clean_path
+
+try:
+    pairs = json.loads(sys.argv[1])
+except Exception:
+    sys.exit(0)
+
+errors = []
+for mod_path, attr_name in pairs:
+    try:
+        mod = importlib.import_module(mod_path)
+        if not hasattr(mod, attr_name):
+            errors.append(f"AttributeError: module '{mod_path}' has no attribute '{attr_name}'")
+    except ModuleNotFoundError:
+        pass
+    except Exception as e:
+        errors.append(str(e))
+
+if errors:
+    print('ERR:' + '; '.join(errors))
+    sys.exit(1)
+"""
 
 
 class SandboxTestRunner:
@@ -120,13 +157,14 @@ class MicroSandboxEvaluator:
     Ephemeral Micro-Sandbox Runtime Evaluator.
     Dynamically tests whether imported modules, classes, and accessed attributes
     actually resolve in the Python runtime without raising AttributeError or ImportError.
+    Executes in a safe isolated environment to prevent RCE or side-effects.
     """
 
     @classmethod
     def evaluate_code_imports(cls, code: str, timeout: float = 1.5) -> MicroSandboxResult:
         """
         Extracts imported aliases and attribute lookups from code and executes an isolated
-        subprocess check `python -c "..."` to detect runtime AttributeError / ImportError.
+        subprocess check with JSON IPC and path isolation to detect runtime AttributeError / ImportError.
         """
         import ast
 
@@ -161,48 +199,29 @@ class MicroSandboxEvaluator:
                     local_param_names.add(node.args.kwarg.arg)
 
         # Collect attribute lookups on imported aliases (e.g. types.ToolContext, pydantic.ConfigDict)
-        tested_pairs = set()
+        tested_pairs = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
                 alias = node.value.id
                 attr = node.attr
                 if alias in import_map and alias not in local_param_names:
-                    tested_pairs.add((import_map[alias], attr))
+                    mod_path = import_map[alias]
+                    # Enforce strict Python identifier regex validation
+                    if _RE_MOD_PATH.match(mod_path) and _RE_ATTR_NAME.match(attr):
+                        tested_pairs.append([mod_path, attr])
 
         if not tested_pairs:
             return MicroSandboxResult(is_valid=True)
 
-        # Build dynamic Python evaluation script
-        test_script_lines = [
-            "import sys, importlib",
-            "errors = []"
-        ]
-
-        for mod_path, attr_name in tested_pairs:
-            # Escape strings safely
-            safe_mod = mod_path.replace("'", "\\'")
-            safe_attr = attr_name.replace("'", "\\'")
-            test_script_lines.append(f"""
-try:
-    mod = importlib.import_module('{safe_mod}')
-    if not hasattr(mod, '{safe_attr}'):
-        errors.append(f"AttributeError: module '{safe_mod}' has no attribute '{safe_attr}'")
-except ModuleNotFoundError:
-    pass
-except Exception as e:
-    errors.append(str(e))
-""")
-
-        test_script_lines.append("if errors:\n    print('ERR:' + '; '.join(errors))\n    sys.exit(1)")
-
-        script = "\n".join(test_script_lines)
-
         try:
+            safe_cwd = tempfile.gettempdir()
+            payload = json.dumps(tested_pairs)
             res = subprocess.run(
-                [sys.executable, "-c", script],
+                [sys.executable, "-c", _SANDBOX_EVAL_SCRIPT, payload],
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                cwd=safe_cwd
             )
             if res.returncode != 0:
                 err_text = (res.stdout + "\n" + res.stderr).strip()
