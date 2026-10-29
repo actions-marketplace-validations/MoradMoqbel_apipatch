@@ -1,0 +1,154 @@
+{
+  "updated_at": "2026-10-29T17:16:06Z",
+  "radar_status": "ONLINE_HOURLY",
+  "min_stars_threshold": 100,
+  "cron_frequency": "Every 1 Hour (24/7 Cloud Daemon)",
+  "leads": [
+    {
+      "id": "apache_superset_44938",
+      "repo": "apache/superset",
+      "pr_number": 44938,
+      "pr_url": "https://github.com/apache/superset/pull/44938",
+      "pr_title": "chore(deps): bump sqlalchemy from 2.0.52 to 2.1.3",
+      "stars": 75095,
+      "package": "sqlalchemy",
+      "created_at": "2026-10-10T07:01:05Z",
+      "state": "open",
+      "ci_status": "failure",
+      "is_broken": true,
+      "break_severity": "CRITICAL",
+      "runtime_impact": "Dependabot bump caused CI failure: playwright-tests-required, test-postgres-required",
+      "failed_checks": [
+        "playwright-tests-required",
+        "test-postgres-required",
+        "unit-tests-required",
+        "unit-tests (current)",
+        "test-sqlite",
+        "test-postgres (current)",
+        "test-mysql",
+        "test-postgres-hive",
+        "test-postgres-presto",
+        "docker-build (dev)"
+      ],
+      "affected_files": [
+        {
+          "file": "scripts/benchmark_migration.py",
+          "line": 33,
+          "call": "from sqlalchemy import create_engine, inspect, text",
+          "fix": "from sqlalchemy import create_engine, inspect, text, select, func, delete"
+        }
+      ],
+      "apipatch_patch_available": true,
+      "patch_type": "AST_CODE_REWRITE"
+    },
+    {
+      "id": "shopware_frontends_2809",
+      "repo": "shopware/frontends",
+      "pr_number": 2809,
+      "pr_url": "https://github.com/shopware/frontends/pull/2809",
+      "pr_title": "chore(deps): bump axios from 1.19.0 to 1.20.0",
+      "stars": 229,
+      "package": "axios",
+      "created_at": "2026-10-04T18:26:44Z",
+      "state": "open",
+      "ci_status": "failure",
+      "is_broken": true,
+      "break_severity": "CRITICAL",
+      "runtime_impact": "Dependabot bump caused CI failure: Build, Templates manifest, Lint.",
+      "failed_checks": [
+        "Build",
+        "Templates manifest",
+        "Lint",
+        "Test",
+        "Check audit",
+        "Build examples"
+      ],
+      "affected_files": [
+        {
+          "file": "packages/api-client/src/index.ts",
+          "line": 15,
+          "call": "import { AxiosError } from 'axios';",
+          "fix": "import type { AxiosError, InternalAxiosRequestConfig } from 'axios';"
+        }
+      ],
+      "apipatch_patch_available": true,
+      "discovered_at": "2026-10-04T18:30:40Z",
+      "is_real_code_break": true,
+      "break_category": "AST_CODE_BREAK",
+      "patch_type": "AST_CODE_REWRITE"
+    },
+    {
+      "id": "aws-samples_sample-autonomous-cloud-coding-agents_947",
+      "repo": "aws-samples/sample-autonomous-cloud-coding-agents",
+      "pr_number": 947,
+      "pr_url": "https://github.com/aws-samples/sample-autonomous-cloud-coding-agents/pull/947",
+      "pr_title": "chore(deps): uv: bump the all-python group across 1 directory with 9 updates",
+      "stars": 158,
+      "package": "langchain",
+      "created_at": "2026-10-10T06:54:17Z",
+      "state": "open",
+      "ci_status": "failure",
+      "is_broken": true,
+      "break_severity": "CRITICAL",
+      "runtime_impact": "Dependabot bump caused CI failure: Secrets, deps, and workflow scan, build (agentcore)",
+      "failed_checks": [
+        "Secrets, deps, and workflow scan",
+        "build (agentcore)"
+      ],
+      "affected_files": [
+        {
+          "file": "agent/scripts/diagnostics/test_sdk_smoke.py",
+          "line": 167,
+          "call": "AttributeError: 'Runnable' object has no attribute 'run'",
+          "fix": "Migrate .run(...) to .invoke(...)"
+        },
+        {
+          "file": "agent/scripts/diagnostics/test_subprocess_threading.py",
+          "line": 91,
+          "call": "AttributeError: 'Runnable' object has no attribute 'run'",
+          "fix": "Migrate .run(...) to .invoke(...)"
+        },
+        {
+          "file": "agent/src/pipeline.py",
+          "line": 652,
+          "call": "AttributeError: 'Runnable' object has no attribute 'run'",
+          "fix": "Migrate .run(...) to .invoke(...)"
+        }
+      ],
+      "apipatch_patch_available": true,
+      "patch_type": "AST_CODE_REWRITE"
+    },
+    {
+      "id": "fabriziosalmi_wildbox_667",
+      "repo": "fabriziosalmi/wildbox",
+      "pr_number": 667,
+      "pr_url": "https://github.com/fabriziosalmi/wildbox/pull/667",
+      "pr_title": "build(deps): bump zod from 3.25.76 to 4.6.5 in /open-security-dashboard",
+      "stars": 134,
+      "package": "zod",
+      "created_at": "2026-10-04T07:53:12Z",
+      "state": "open",
+      "ci_status": "failure",
+      "is_broken": true,
+      "break_severity": "CRITICAL",
+      "runtime_impact": "Zod v4 schema syntax deprecations detonated Playwright E2E and dashboard type checking (2 failing CI checks).",
+      "failed_checks": [
+        "Dashboard Lint / Format / Types (Playwright CI)",
+        "E2E Tests (Playwright)"
+      ],
+      "affected_files": [
+        {
+          "file": "open-security-dashboard/src/lib/tool-schema.ts",
+          "line": 316,
+          "call": "let n = z.number({ invalid_type_error: 'Enter a number' }).finite('Enter a number')",
+          "fix": "let n = z.number({ error: 'Enter a number' }).finite('Enter a number')"
+        }
+      ],
+      "apipatch_patch_available": true,
+      "discovered_at": "2026-10-04T07:53:12Z",
+      "is_real_code_break": true,
+      "break_category": "AST_CODE_BREAK",
+      "patch_type": "AST_CODE_REWRITE"
+    }
+  ]
+}

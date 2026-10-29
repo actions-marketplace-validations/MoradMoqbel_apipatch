@@ -13,6 +13,13 @@ import urllib.request
 import urllib.parse
 import urllib.error
 from typing import List, Dict, Any, Optional
+
+try:
+    import requests
+    _HAS_REQUESTS = True
+except ImportError:
+    _HAS_REQUESTS = False
+
 from apipatch.engine import ApiPatchEngine, Colors
 from apipatch.github_client import GitHubClient, resolve_github_token, mask_token
 from apipatch.auto_detector import should_audit_file
@@ -86,6 +93,35 @@ class GitHubPRHunter:
         }
         if self.github_token:
             headers["Authorization"] = f"token {self.github_token}"
+
+        if _HAS_REQUESTS:
+            for attempt in range(1, 4):
+                try:
+                    resp = requests.request(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        json=payload if payload is not None else None,
+                        timeout=35
+                    )
+                    if resp.status_code == 404:
+                        return None
+                    if resp.status_code == 403 and "rate limit" in resp.text.lower():
+                        print(f"{Colors.WARNING}[!] GitHub API rate limit reached.{Colors.ENDC}")
+                        return None
+                    if not resp.ok:
+                        if resp.status_code not in (404,):
+                            print(f"{Colors.FAIL}[!] GitHub API error ({resp.status_code}) on {method} {url}: {resp.text[:200]}{Colors.ENDC}")
+                        return None
+                    if not resp.text.strip():
+                        return {"status": "ok"}
+                    return resp.json()
+                except Exception as req_err:
+                    if attempt < 3:
+                        time.sleep(1.0 * attempt)
+                        continue
+                    print(f"{Colors.FAIL}[!] Network error on GitHub API request: {req_err}{Colors.ENDC}")
+                    return None
 
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -202,6 +238,21 @@ class GitHubPRHunter:
 
     def fetch_raw_file_content(self, raw_url: str) -> Optional[str]:
         """Fetches raw code content from repository file URL."""
+        if _HAS_REQUESTS:
+            for attempt in range(1, 4):
+                try:
+                    headers = {"User-Agent": "ApiPatch-Bot/1.0"}
+                    if self.github_token:
+                        headers["Authorization"] = f"token {self.github_token}"
+                    resp = requests.get(raw_url, headers=headers, timeout=30)
+                    if resp.status_code == 200:
+                        return resp.text
+                    elif resp.status_code == 404:
+                        return None
+                except Exception:
+                    if attempt < 3:
+                        time.sleep(1.0)
+                        continue
         try:
             req = urllib.request.Request(raw_url, headers={"User-Agent": "ApiPatch-Bot/1.0"})
             if self.github_token:
@@ -415,13 +466,17 @@ class GitHubPRHunter:
         verify_tests: bool = False,
         per_subproject: bool = True,
         max_prs: int = 1,
-        files_per_subproject: Optional[int] = None
+        files_per_subproject: Optional[int] = None,
+        ignore_docs: bool = True,
+        ignore_tests: bool = True
     ) -> Dict[str, Any]:
         """
         Audits an entire GitHub repository (or specific sub-directory), applies refactorings to all deprecated files,
         creates a branch (directly or on a fork), commits all modified files, and opens
         a comprehensive live Pull Request.
         """
+        from apipatch.filters import should_ignore_path
+
         raw_input = repo_name
         repo_name, target_pr_number = GitHubClient.parse_pr_target(raw_input)
         print(f"\n{Colors.HEADER}{Colors.BOLD}=== ApiPatch: Autonomous GitHub PR Pipeline ==={Colors.ENDC}")
@@ -448,6 +503,13 @@ class GitHubPRHunter:
             print(f"Scope Filter (Target Path): {Colors.BOLD}{target_path}{Colors.ENDC}")
         if verify_tests:
             print(f"Verification Engine: {Colors.OKGREEN}Active (AST & Sandbox Test Validation){Colors.ENDC}")
+        if ignore_docs or ignore_tests:
+            ignored_labels = []
+            if ignore_docs:
+                ignored_labels.append("Docs (docs/, website/, *.md)")
+            if ignore_tests:
+                ignored_labels.append("Tests (tests/, __tests__/, test_*.py)")
+            print(f"Dynamic Ignore Filter: {Colors.OKGREEN}Active (Skipping {', '.join(ignored_labels)}){Colors.ENDC}")
         print(f"Auth Token: {Colors.OKBLUE}{mask_token(self.github_token)}{Colors.ENDC}")
 
         if not self.github_token:
@@ -490,11 +552,48 @@ class GitHubPRHunter:
         print(f"[✓] Retrieved {len(tree_items)} total repository files.")
 
         all_tree_paths = [it.get("path", "") for it in tree_items]
-        subprojects = MonorepoManager.discover_subprojects_from_paths(all_tree_paths)
+        subprojects = MonorepoManager.discover_subprojects_from_paths(
+            all_tree_paths,
+            ignore_docs=ignore_docs,
+            ignore_tests=ignore_tests
+        )
         is_mono = MonorepoManager.is_monorepo(subprojects)
         if is_mono and not target_path:
             workspaces = [d or "root" for d in subprojects.keys()]
             print(f"  {Colors.OKBLUE}[*] Monorepo architecture detected: Found {len(subprojects)} distinct subproject workspace(s): {', '.join(workspaces)}.{Colors.ENDC}")
+
+        # Detect Target Runtime & CI/CD constraints from remote tree
+        repo_runtime_context: Optional[str] = None
+        try:
+            runtime_paths = [
+                p for p in all_tree_paths
+                if (
+                    (".github/workflows/" in p.replace("\\", "/").lower() and p.endswith((".yml", ".yaml")))
+                    or os.path.basename(p).lower() in {
+                        "pyproject.toml", "package.json", "setup.cfg", ".python-version",
+                        "runtime.txt", "dockerfile", ".nvmrc", ".node-version"
+                    }
+                )
+            ]
+            if runtime_paths:
+                remote_manifest_map: Dict[str, str] = {}
+                for rp in runtime_paths[:8]:
+                    try:
+                        rc = self.client.fetch_file_content(repo_name, rp, ref=audit_ref)
+                        if rc:
+                            remote_manifest_map[rp] = rc
+                    except Exception:
+                        pass
+                if remote_manifest_map:
+                    from apipatch.runtime_detector import TargetRuntimeDetector
+                    rt_ctx = TargetRuntimeDetector.detect_from_file_map(remote_manifest_map)
+                    if rt_ctx.has_constraints:
+                        repo_runtime_context = rt_ctx.to_prompt_context()
+                        pins = ", ".join(rt_ctx.python_versions or rt_ctx.node_versions)
+                        srcs = ", ".join(rt_ctx.pinned_sources)
+                        print(f"  {Colors.OKGREEN}[✓] Target Runtime & CI/CD Matrix Awareness Active: {pins} (from {srcs}){Colors.ENDC}")
+        except Exception:
+            pass
 
         if precomputed_results:
             audit_results = precomputed_results
@@ -507,7 +606,10 @@ class GitHubPRHunter:
             candidate_files = []
             
             # If inspecting a specific PR with changed code files, prioritize PR changed files
-            pr_code_files = [f for f in pr_changed_files if f.endswith(supported_exts)]
+            pr_code_files = [
+                f for f in pr_changed_files 
+                if f.endswith(supported_exts) and not should_ignore_path(f, ignore_docs=ignore_docs, ignore_tests=ignore_tests)
+            ]
             if pr_code_files and not target_norm:
                 candidate_files = list(pr_code_files)
                 print(f"  {Colors.OKBLUE}[*] Scoped audit to {len(candidate_files)} file(s) modified in PR #{target_pr_number}.{Colors.ENDC}")
@@ -519,6 +621,8 @@ class GitHubPRHunter:
                     if any(ignore in p for ignore in [
                         "node_modules/", ".git/", "__pycache__/", "venv/", ".env", "dist/", "build/"
                     ]):
+                        continue
+                    if should_ignore_path(p, ignore_docs=ignore_docs, ignore_tests=ignore_tests):
                         continue
                     if target_norm:
                         p_lower = p.replace("\\", "/").lower()
@@ -572,7 +676,7 @@ class GitHubPRHunter:
                         audited_count += 1
                         current_num = audited_count
                     print(f"  {Colors.OKBLUE}[Auditing {current_num}] {path}...{Colors.ENDC}", flush=True)
-                    audit = self.engine.audit_code(path, content)
+                    audit = self.engine.audit_code(path, content, project_context=repo_runtime_context)
                     if audit.get("has_breaking_changes") and audit.get("refactored_code"):
                         diff = self.engine.generate_diff(content, audit["refactored_code"], path)
                         return {
@@ -635,6 +739,7 @@ class GitHubPRHunter:
             item.get("path", "").replace("\\", "/")
             for item in tree_items
             if os.path.basename(item.get("path", "")).lower() in ("requirements.txt", "pyproject.toml", "package.json")
+            and not should_ignore_path(item.get("path", ""), ignore_docs=ignore_docs, ignore_tests=ignore_tests)
         ] if ('tree_items' in locals() and not precomputed_results) else []
 
         if all_manifest_paths and not precomputed_results:
@@ -729,9 +834,10 @@ class GitHubPRHunter:
                 if auto_subproject:
                     scope_prefix = f"[{auto_subproject.capitalize()}] "
 
+            committed_audit_results = [r for r in sub_audit_results if r.get("file") in sub_files_to_commit]
             pr_payload = self.client.generate_pr_markdown(
                 repo_name,
-                sub_audit_results,
+                committed_audit_results or sub_audit_results,
                 custom_title=custom_title,
                 scope_prefix=scope_prefix
             )
@@ -906,7 +1012,14 @@ class GitHubPRHunter:
             "- [x] 100% business logic signatures preserved.",
             "- [x] Multi-layer structural safety guard passed.",
             "",
-            "> *Generated autonomously by [ApiPatch](https://github.com/MoradMoqbel/apipatch).*"
+            "---",
+            "### ⚡ What is [ApiPatch](https://apipatch.vercel.app)?",
+            "**ApiPatch** is an autonomous deterministic AST refactoring agent that eliminates dependency drift for engineering teams:",
+            "- 🛡️ **Zero Hallucinations:** Rewrites Abstract Syntax Trees (AST) using verified vendor migration rules, not fuzzy LLM guesses.",
+            "- 🧪 **Sandbox Verified:** Automatically executes project test suites in an isolated sandbox before opening a PR.",
+            "- ⚡ **Continuous Upstream Radar:** Catches breaking SDK changes before CI breaks production.",
+            "",
+            "> 🚀 **[Install Free GitHub Action](https://apipatch.vercel.app)** &bull; 📖 **[Docs & CLI (`pip install apipatch`)](https://github.com/MoradMoqbel/apipatch)** &bull; 💬 **[Request 48h Private Repo Pilot](https://apipatch.vercel.app/#pilot)**"
         ])
 
         return {

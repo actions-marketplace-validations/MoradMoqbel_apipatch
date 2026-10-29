@@ -4,10 +4,14 @@ Provides modern terminal commands for autonomous API code audits, automated refa
 sandbox test verification, live GitHub PR submission, and GitHub App Webhook daemon.
 """
 
+import os
 import sys
+import re
 import json
 import socket
 import argparse
+import time
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 try:
@@ -183,6 +187,14 @@ def main():
     discover_parser.add_argument("--submit", "--open-pr", dest="submit", action="store_true", help="Submit live Pull Requests directly")
     discover_parser.add_argument("--dry-run", dest="dry_run", action="store_true", default=True, help="Preview PRs without opening (default: True)")
 
+    # Command: intercept (Autonomous Dependabot & Breaking-Change Interceptor)
+    intercept_parser = subparsers.add_parser("intercept", help="Intercept Dependabot PRs, detect if version bumps break production code, and propose fixes")
+    intercept_parser.add_argument("target", nargs="?", default="sweep", help="Package name (e.g., langchain, zod), specific PR URL, or 'sweep' for autonomous dynamic sweep (default: sweep)")
+    intercept_parser.add_argument("--max", type=int, default=50, help="Max candidate Dependabot PRs to inspect (default: 50)")
+    intercept_parser.add_argument("--min-stars", type=int, default=100, help="Minimum star count filter for candidate repositories (default: 100)")
+    intercept_parser.add_argument("-o", "--output", help="Save intercept results as a JSON file for the private dashboard")
+    intercept_parser.add_argument("--token", help="GitHub Personal Access Token (auto-discovered if omitted)")
+
     # Command: radar
     radar_parser = subparsers.add_parser("radar", help="Launch the local interactive ApiPatch Radar Web Dashboard")
     radar_parser.add_argument("--port", type=int, default=8765, help="Port to bind dashboard server (default: 8765)")
@@ -195,6 +207,13 @@ def main():
     report_parser.add_argument("-o", "--output", help="Custom output report file path (e.g., apipatch_audit_report.html)")
     report_parser.add_argument("--hourly-rate", type=float, default=75.0, help="Benchmark developer hourly rate in USD (default: $75.00)")
 
+    # Common dynamic filtering flags for code inspection commands
+    for p in (scan_parser, fix_parser, pr_parser, hunt_parser, discover_parser):
+        p.add_argument("--include-docs", action="store_true", default=False, help="Include documentation files and directories (docs/, website/, *.md)")
+        p.add_argument("--include-tests", action="store_true", default=False, help="Include test files and directories (tests/, __tests__/, test_*.py)")
+        p.add_argument("--ignore-docs", dest="include_docs", action="store_false", help="Ignore documentation files and directories (default: active)")
+        p.add_argument("--ignore-tests", dest="include_tests", action="store_false", help="Ignore test files and directories (default: active)")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -202,7 +221,6 @@ def main():
         sys.exit(0)
 
     if getattr(args, "no_telemetry", False):
-        import os
         os.environ["APIPATCH_NO_TELEMETRY"] = "1"
 
     track_cli_event(args.command, {"has_provider": bool(getattr(args, "provider", None))})
@@ -222,7 +240,14 @@ def main():
             if getattr(args, "output", None):
                 _save_report({"results": [result]}, args.output)
         else:
-            result = engine.process_directory(args.path, write_in_place=False)
+            ignore_docs = not getattr(args, "include_docs", False)
+            ignore_tests = not getattr(args, "include_tests", False)
+            result = engine.process_directory(
+                args.path,
+                write_in_place=False,
+                ignore_docs=ignore_docs,
+                ignore_tests=ignore_tests
+            )
             if getattr(args, "output", None):
                 _save_report(result, args.output)
 
@@ -246,10 +271,14 @@ def main():
             if getattr(args, "output", None):
                 _save_report({"results": [result]}, args.output)
         else:
+            ignore_docs = not getattr(args, "include_docs", False)
+            ignore_tests = not getattr(args, "include_tests", False)
             result = engine.process_directory(
                 args.path,
                 write_in_place=args.write,
-                verify_tests=args.verify_tests
+                verify_tests=args.verify_tests,
+                ignore_docs=ignore_docs,
+                ignore_tests=ignore_tests
             )
             if getattr(args, "output", None):
                 _save_report(result, args.output)
@@ -265,6 +294,8 @@ def main():
         if not _check_provider_or_guide(engine, "pr"):
             sys.exit(1)
         hunter = GitHubPRHunter(github_token=args.token, engine=engine)
+        ignore_docs = not getattr(args, "include_docs", False)
+        ignore_tests = not getattr(args, "include_tests", False)
         hunter.audit_and_pr_repository(
             repo_name=args.repo,
             fork=args.fork,
@@ -278,7 +309,9 @@ def main():
             verify_tests=getattr(args, "verify_tests", False),
             per_subproject=getattr(args, "per_subproject", True),
             max_prs=getattr(args, "max_prs", 1),
-            files_per_subproject=getattr(args, "files_per_subproject", None)
+            files_per_subproject=getattr(args, "files_per_subproject", None),
+            ignore_docs=ignore_docs,
+            ignore_tests=ignore_tests
         )
 
     elif args.command == "webhook":
@@ -338,13 +371,123 @@ def main():
             dry_run=dry_run
         )
 
+    elif args.command == "intercept":
+        from apipatch.dependabot_interceptor import DependabotInterceptor
+        interceptor = DependabotInterceptor(github_token=args.token)
+        print(f"\n{Colors.HEADER}{Colors.BOLD}⚡ ApiPatch: Dependabot Breaking-Change Interceptor{Colors.ENDC}")
+        target = args.target.strip()
+        if "github.com" in target and "/pull/" in target:
+            parts = target.split("github.com/")[-1].split("/pull/")
+            repo_name = parts[0]
+            pr_number = int(parts[1].split("/")[0].split("?")[0])
+            pr_data = interceptor.client.get_pull_request(repo_name, pr_number)
+            if not pr_data:
+                print(f"{Colors.FAIL}[!] Could not retrieve PR details for {target}{Colors.ENDC}")
+                sys.exit(1)
+            bumps = DependabotInterceptor.parse_pr_bump(pr_data.get("title", ""), pr_data.get("body", ""))
+            pkgs = [b["package"] for b in bumps] if bumps else [target]
+            print(f"Target PR: {repo_name}#{pr_number} (Packages: {', '.join(pkgs)})")
+            ci_res = interceptor.inspect_pr_ci_status(repo_name, pr_number)
+            subpath_match = re.search(r"in\s+([a-zA-Z0-9_\-\.\/]+)", pr_data.get("title", ""))
+            subpath = subpath_match.group(1).strip("/") if subpath_match else None
+            audit_res = interceptor.audit_repo_against_bump(repo_name, pkgs, ref=ci_res.get("head_sha") or ci_res.get("pr_branch"), subpath=subpath)
+            rep = interceptor.generate_interceptor_report(repo_name, pr_number, pkgs, audit_res, ci_res)
+            print(rep)
+        elif target.lower() == "sweep":
+            min_stars = getattr(args, "min_stars", 100)
+            max_prs = getattr(args, "max", 50)
+            sweep_results = interceptor.run_autonomous_sweep(min_stars=min_stars, max_prs=max_prs)
+            print(f"\n{Colors.OKGREEN}[✓] Autonomous Sweep Completed: Discovered {len(sweep_results)} lead(s) with stars >= {min_stars}.{Colors.ENDC}")
+            for r in sweep_results:
+                status_icon = "❌" if r.get("is_broken") else "✓"
+                print(f"  {status_icon} [{r['repo']}] (⭐ {r['stars']}) PR #{r['pr_number']}: {r['package']} | Broken: {r.get('is_broken')}")
+            if getattr(args, "output", None):
+                out_path = args.output
+                merged_leads_dict = {}
+                if os.path.exists(out_path):
+                    try:
+                        with open(out_path, "r", encoding="utf-8") as f:
+                            existing_data = json.load(f)
+                            for l in existing_data.get("leads", []):
+                                aff = l.get("affected_files", [])
+                                is_fake = any(
+                                    (f.get("file") in ("package.json", "pyproject.toml", ".github/workflows/ci.yml") and f.get("line") == 1) or
+                                    "Apply companion migration fix" in f.get("fix", "") or
+                                    "Apply companion code update" in f.get("fix", "")
+                                    for f in aff
+                                )
+                                if not is_fake and l.get("is_broken") and aff:
+                                    merged_leads_dict[l["id"]] = l
+                    except Exception:
+                        pass
+                for r in sweep_results:
+                    aff = r.get("affected_files", [])
+                    is_fake = any(
+                        (f.get("file") in ("package.json", "pyproject.toml", ".github/workflows/ci.yml") and f.get("line") == 1) or
+                        "Apply companion migration fix" in f.get("fix", "") or
+                        "Apply companion code update" in f.get("fix", "")
+                        for f in aff
+                    )
+                    if not is_fake and r.get("is_broken") and aff:
+                        merged_leads_dict[r["id"]] = r
+
+                # Strictly prune leads older than 30 days and keep verified AST code rewrites only
+                cutoff_date = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+                all_leads = [
+                    l for l in merged_leads_dict.values()
+                    if (l.get("created_at") or "")[:10] >= cutoff_date and l.get("is_broken") and l.get("affected_files")
+                    and not any(f.get("file", "").endswith((".json", ".toml", ".lock", ".yml", ".yaml")) for f in l.get("affected_files", []))
+                ]
+                all_leads.sort(key=lambda x: -x.get("stars", 0))
+
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "radar_status": "ONLINE_HOURLY",
+                        "min_stars_threshold": min_stars,
+                        "cron_frequency": "Every 1 Hour (24/7 Cloud Daemon)",
+                        "leads": all_leads
+                    }, f, indent=2)
+                print(f"{Colors.OKGREEN}[✓] Saved {len(all_leads)} cumulative lead(s) to {out_path}{Colors.ENDC}")
+        else:
+            min_stars = getattr(args, "min_stars", 0)
+            print(f"Searching GitHub for active Dependabot PRs bumping '{target}' (min_stars: {min_stars})...")
+            leads = interceptor.search_active_dependabot_prs(package=target, limit=args.max, min_stars=min_stars)
+            if not leads:
+                print(f"{Colors.WARNING}[!] No active Dependabot PRs found for package '{target}'.{Colors.ENDC}")
+            sweep_records = []
+            for lead in leads:
+                print(f"\n{Colors.OKBLUE}━" * 50 + f"{Colors.ENDC}")
+                print(f"PR: {lead['url']} (⭐ {lead.get('stars', 0)} stars)")
+                print(f"Title: {lead['title']}")
+                ci_res = interceptor.inspect_pr_ci_status(lead['repo'], lead['number'])
+                subpath_match = re.search(r"in\s+([a-zA-Z0-9_\-\.\/]+)", lead.get("title", ""))
+                subpath = subpath_match.group(1).strip("/") if subpath_match else None
+                audit_res = interceptor.audit_repo_against_bump(lead['repo'], target, ref=ci_res.get("head_sha") or ci_res.get("pr_branch"), subpath=subpath)
+                rep = interceptor.generate_interceptor_report(lead['repo'], lead['number'], target, audit_res, ci_res)
+                print(rep)
+                sweep_records.append({
+                    "repo": lead["repo"],
+                    "pr_number": lead["number"],
+                    "pr_url": lead["url"],
+                    "pr_title": lead["title"],
+                    "stars": lead.get("stars", 0),
+                    "package": target,
+                    "ci_status": ci_res.get("status"),
+                    "ci_failures": ci_res.get("failures", []),
+                    "is_broken": audit_res.get("is_broken") or ci_res.get("status") == "failure",
+                    "breaking_files": audit_res.get("breaking_files", [])
+                })
+            if getattr(args, "output", None) and sweep_records:
+                with open(args.output, "w", encoding="utf-8") as f:
+                    json.dump({"updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "leads": sweep_records}, f, indent=2)
+                print(f"\n{Colors.OKGREEN}[✓] Saved results to {args.output}{Colors.ENDC}")
+
     elif args.command == "radar":
         from radar_server import run_server
         run_server(port=args.port, auto_open=not args.no_browser)
 
     elif args.command == "report":
-        import os
-        import json
         auditor = CodebaseAuditor(target_dir=args.path, hourly_rate=args.hourly_rate)
         metrics = auditor.run_audit()
 

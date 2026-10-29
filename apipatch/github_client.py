@@ -16,6 +16,12 @@ import urllib.parse
 import urllib.error
 from typing import List, Dict, Any, Optional, Set, Tuple
 
+try:
+    import requests
+    _HAS_REQUESTS = True
+except ImportError:
+    _HAS_REQUESTS = False
+
 GITHUB_API_BASE = "https://api.github.com"
 
 
@@ -121,6 +127,35 @@ class GitHubClient:
         if headers_override:
             headers.update(headers_override)
 
+        if _HAS_REQUESTS:
+            for attempt in range(1, 4):
+                try:
+                    resp = requests.request(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        json=payload if payload is not None else None,
+                        timeout=45
+                    )
+                    if resp.status_code == 404:
+                        return None
+                    if resp.status_code == 403 and "rate limit" in resp.text.lower():
+                        print(f"[!] GitHub API rate limit reached.")
+                        return None
+                    if not resp.ok:
+                        if resp.status_code not in (404,):
+                            print(f"[!] GitHub API HTTP {resp.status_code} on {method} {url}: {resp.text[:200]}")
+                        return None
+                    if not resp.text.strip():
+                        return {"status": "ok", "code": resp.status_code}
+                    return resp.json()
+                except Exception as req_err:
+                    if attempt < 3:
+                        time.sleep(1.5 * attempt)
+                        continue
+                    print(f"[!] Network error on GitHub API request ({method} {url}): {req_err}")
+                    return None
+
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
 
@@ -158,6 +193,28 @@ class GitHubClient:
                     continue
                 print(f"[!] Network error on GitHub API request ({method} {url}): {e}")
                 return None
+
+    def request(
+        self,
+        endpoint: str,
+        method: str = "GET",
+        payload: Optional[Dict[str, Any]] = None,
+        full_url: Optional[str] = None,
+        headers_override: Optional[Dict[str, str]] = None
+    ) -> Optional[Any]:
+        """Public proxy for authenticated GitHub API requests."""
+        return self._request(
+            endpoint=endpoint,
+            method=method,
+            payload=payload,
+            full_url=full_url,
+            headers_override=headers_override
+        )
+
+    @staticmethod
+    def url_quote(string: str) -> str:
+        """URL encodes a string safely for query parameters."""
+        return urllib.parse.quote(string)
 
     # ── User & Repository Metadata ──────────────────────────────────────────
 
@@ -209,6 +266,32 @@ class GitHubClient:
         if repo_data and "default_branch" in repo_data:
             return repo_data["default_branch"]
         return "main"
+
+    def fetch_job_logs(self, repo_full_name: str, job_id: int) -> str:
+        """Downloads the raw build/test logs for a GitHub Actions job."""
+        clean_name = self.normalize_repo_name(repo_full_name)
+        url = f"{GITHUB_API_BASE}/repos/{clean_name}/actions/jobs/{job_id}/logs"
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "ApiPatch-Autonomous-Agent/1.0"
+        }
+        if self.token:
+            headers["Authorization"] = f"token {self.token}"
+
+        if _HAS_REQUESTS:
+            try:
+                resp = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
+                if resp.ok:
+                    return resp.text
+            except Exception:
+                pass
+
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except Exception:
+            return ""
 
     # ── Forking ─────────────────────────────────────────────────────────────
 
@@ -539,19 +622,32 @@ class GitHubClient:
         prefix = scope_prefix or ""
         scope_clean = prefix.strip("[] ").lower().replace("/", "-").replace(" ", "-") if prefix else ""
         scope_tag = f"({scope_clean})" if scope_clean else ""
-        default_title = f"refactor{scope_tag}: migrate deprecated {libs_str} API calls ({total_files} file{'s' if total_files > 1 else ''})"
+        if "imp" in libs:
+            default_title = f"refactor{scope_tag}: migrate removed 'imp' module for Python 3.12+ compatibility"
+        else:
+            default_title = f"refactor{scope_tag}: migrate deprecated {libs_str} API calls ({total_files} file{'s' if total_files > 1 else ''})"
         title = custom_title or default_title
 
         body_lines = [
             "## ⚡ Autonomous API Migration by [ApiPatch](https://github.com/MoradMoqbel/apipatch)",
             "",
             f"This automated Pull Request modernizes deprecated or breaking **{libs_str}** API signatures across **{total_files}** file(s).",
-            "",
+            ""
+        ]
+
+        if "imp" in libs:
+            body_lines.extend([
+                "> [!IMPORTANT]",
+                "> **Python 3.12+ Compatibility**: The legacy `imp` module was deprecated in Python 3.4 and completely **removed in Python 3.12 (PEP 451)**. This PR migrates dynamic module loading to standard `importlib.util`, preventing runtime `ModuleNotFoundError: No module named 'imp'` when running on Python 3.12, 3.13, and modern Linux distributions (e.g., Ubuntu 24.04).",
+                ""
+            ])
+
+        body_lines.extend([
             "### 🔍 Detected Breaking Changes & Fixes:",
             "",
             "| File | Library | Deprecated Call | Modernized Replacement |",
             "| :--- | :--- | :--- | :--- |"
-        ]
+        ])
 
         for file_path, issue in all_issues:
             lib = issue.get("library", "Unknown")
@@ -567,10 +663,17 @@ class GitHubClient:
             "- [x] **Self-Healing Guard**: AI hallucinations filtered and validated against AST rules.",
             "",
             "---",
-            "*Generated autonomously with ❤️ by [ApiPatch](https://github.com/MoradMoqbel/apipatch) — The Autonomous AI Agent for Breaking API Changes.*"
+            "### ⚡ What is [ApiPatch](https://apipatch.vercel.app)?",
+            "**ApiPatch** is an autonomous deterministic AST refactoring agent that eliminates dependency drift for engineering teams:",
+            "- 🛡️ **Zero Hallucinations:** Rewrites Abstract Syntax Trees (AST) using verified vendor migration rules, not fuzzy LLM guesses.",
+            "- 🧪 **Sandbox Verified:** Automatically executes project test suites in an isolated sandbox before opening a PR.",
+            "- ⚡ **Continuous Upstream Radar:** Catches breaking SDK changes before CI breaks production.",
+            "",
+            "> 🚀 **[Install Free GitHub Action](https://apipatch.vercel.app)** &bull; 📖 **[Docs & CLI (`pip install apipatch`)](https://github.com/MoradMoqbel/apipatch)** &bull; 💬 **[Request 48h Private Repo Pilot](https://apipatch.vercel.app/#pilot)**"
         ])
 
         return {
             "title": title,
             "body": "\n".join(body_lines)
         }
+

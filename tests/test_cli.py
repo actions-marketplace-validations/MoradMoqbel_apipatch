@@ -121,6 +121,10 @@ class TestCLI(unittest.TestCase):
         self.assertIn("--token", combined)
         self.assertIn("--path", combined)
         self.assertIn("--title", combined)
+        self.assertIn("--include-docs", combined)
+        self.assertIn("--include-tests", combined)
+        self.assertIn("--ignore-docs", combined)
+        self.assertIn("--ignore-tests", combined)
 
     def test_cli_webhook_help(self):
         """webhook command help should list --port, --host, --secret."""

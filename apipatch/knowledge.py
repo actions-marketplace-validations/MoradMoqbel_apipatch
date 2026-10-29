@@ -9,6 +9,46 @@ without hallucinations or placeholder exceptions.
 from typing import List, Dict, Set, Optional, Any
 
 
+# Authoritative Registry of Officially Retired / Shut Down AI Models
+OFFICIAL_RETIRED_MODELS: Dict[str, Dict[str, str]] = {
+    "gpt-3.5-turbo-instruct": {
+        "provider": "OpenAI",
+        "shutdown_date": "September 28, 2026",
+        "replacement": "gpt-4o-mini",
+        "guidance": "Model 'gpt-3.5-turbo-instruct' was permanently shut down by OpenAI on September 28, 2026 and returns 404 model_not_found. Migrate to modern chat completions: client.chat.completions.create(model='gpt-4o-mini', messages=[{'role': 'user', 'content': prompt}]) or use 'babbage-002'/'davinci-002' if specifically testing legacy completions."
+    },
+    "text-davinci-003": {
+        "provider": "OpenAI",
+        "shutdown_date": "January 4, 2024",
+        "replacement": "gpt-4o-mini",
+        "guidance": "Model 'text-davinci-003' is permanently shut down. Migrate to client.chat.completions.create(model='gpt-4o-mini', messages=[...])."
+    },
+    "text-davinci-002": {
+        "provider": "OpenAI",
+        "shutdown_date": "January 4, 2024",
+        "replacement": "gpt-4o-mini",
+        "guidance": "Model 'text-davinci-002' is permanently shut down. Migrate to client.chat.completions.create(model='gpt-4o-mini', messages=[...])."
+    },
+    "code-davinci-002": {
+        "provider": "OpenAI",
+        "shutdown_date": "March 23, 2023",
+        "replacement": "gpt-4o-mini",
+        "guidance": "Model 'code-davinci-002' is permanently shut down. Migrate to client.chat.completions.create(model='gpt-4o-mini', messages=[...])."
+    },
+    "claude-2.0": {
+        "provider": "Anthropic",
+        "shutdown_date": "2024",
+        "replacement": "claude-3-5-sonnet-20241022",
+        "guidance": "Claude 2.0 API is retired. Migrate to client.messages.create(model='claude-3-5-sonnet-20241022', messages=[...])."
+    },
+    "claude-2.1": {
+        "provider": "Anthropic",
+        "shutdown_date": "2024",
+        "replacement": "claude-3-5-sonnet-20241022",
+        "guidance": "Claude 2.1 API is retired. Migrate to client.messages.create(model='claude-3-5-sonnet-20241022', messages=[...])."
+    },
+}
+
 # Authoritative, verified migration knowledge for major ecosystems
 MIGRATION_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
     "google": {
@@ -222,6 +262,72 @@ MIGRATION_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
       OLD: from pydantic import BaseSettings
       NEW: from pydantic_settings import BaseSettings
 """
+    },
+
+    "langchain": {
+        "aliases": ["langchain", "langchain-core", "langchain_core", "langchain-community", "langchain_community", "langchain-openai", "langchain-anthropic", "langgraph"],
+        "description": "LangChain v0.3+ Modern Architecture & LCEL Migration",
+        "guidance": """\
+• LangChain v0.3+ Modern Architecture Guidelines:
+  - BaseChatModel & BaseLLM Canonical Import Paths:
+      OLD: from langchain.chat_models.base import BaseChatModel
+           from langchain.chat_models import ChatOpenAI
+      NEW: from langchain_core.language_models.chat_models import BaseChatModel
+           (or: from langchain_core.language_models import BaseChatModel)
+      CRITICAL WARNING: 'langchain_core.chat_models' DOES NOT EXIST! Do NOT import from 'langchain_core.chat_models'. Always use 'langchain_core.language_models.chat_models' or 'langchain_core.language_models'.
+  - Partner Packages (langchain_openai, langchain_anthropic):
+      OLD: from langchain.chat_models import ChatOpenAI, ChatAnthropic
+      NEW: from langchain_openai import ChatOpenAI
+           from langchain_anthropic import ChatAnthropic
+  - LCEL (LangChain Expression Language) Composition:
+      OLD: LLMChain(llm=llm, prompt=prompt).run(...)
+      NEW: chain = prompt | llm (or prompt | llm | StrOutputParser()); chain.invoke(...)
+  - Retrieval & Chains:
+      OLD: from langchain.chains import RetrievalQA
+      NEW: from langchain.chains import create_retrieval_chain; chain.invoke(...)
+  - Core Messages:
+      NEW: from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
+      RULE: Only import message types that are actually instantiated in the file. Do NOT import unused types (such as ToolCall).
+  - Tool Calls:
+      In modern LangChain, tool calls may be accessed as attributes: `tool_call.name` and `tool_call.args`.
+  - VectorStores & Embeddings:
+      NEW: from langchain_core.vectorstores import VectorStore
+           from langchain_core.embeddings import Embeddings
+"""
+    },
+
+    "sqlalchemy": {
+        "aliases": ["sqlalchemy", "alembic"],
+        "description": "SQLAlchemy 2.0+ & 2.1+ Modern Architecture & Result Typing Migration",
+        "guidance": """\
+• SQLAlchemy 2.0+ & 2.1+ Enterprise Migration Guidelines:
+  - Query Execution (Migrate legacy 1.x query interface):
+      OLD: session.query(User).filter(User.id == 1).first()
+      NEW: session.scalars(select(User).where(User.id == 1)).first()
+      OLD: session.query(User).all()
+      NEW: session.scalars(select(User)).all()
+  - Raw SQL Text Execution:
+      ALWAYS wrap raw SQL string in sqlalchemy.text():
+      conn.execute(text("SELECT ..."))
+  - Result Typing & Scalar Extraction (SQLAlchemy 2.1+ Strict Typing):
+      - When assigning scalar results from conn.execute(...).scalar_one() or .scalar(),
+        explicitly annotate or cast the returned value to avoid untyped/Any inference in strict typecheckers:
+        reset: int = int(conn.execute(...).scalar_one()) or reset: Any = conn.execute(...).scalar_one()
+      - In tuple unpacking from result.fetchall(): items are inferred as generic types.
+        When using unpacked values (e.g. session_id) as dictionary keys in typed mappings (Dict[str, ...]),
+        explicitly stringify or cast them:
+        session_id = str(raw_session_id)
+        dict_mapping.setdefault(session_id, []).append(...)
+  - Declarative Base Migration:
+      OLD: from sqlalchemy.ext.declarative import declarative_base; Base = declarative_base()
+      NEW: from sqlalchemy.orm import DeclarativeBase; class Base(DeclarativeBase): pass
+  - Modern Column Declarations:
+      from sqlalchemy.orm import Mapped, mapped_column
+      id: Mapped[int] = mapped_column(primary_key=True)
+  - Async Engine & Sessionmaker:
+      from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+      async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+"""
     }
 }
 
@@ -266,6 +372,23 @@ def get_relevant_knowledge(
     knowledge_text = ""
     if selected_guidance:
         knowledge_text = "### 📚 Authoritative Modern SDK Migration Rules:\n" + "\n".join(selected_guidance)
+
+    # Check for officially retired models in file_content and ground with official replacement
+    if file_content:
+        retired_notices = []
+        for model_id, info in OFFICIAL_RETIRED_MODELS.items():
+            if model_id in file_content:
+                retired_notices.append(
+                    f"• Officially Retired Model Notice: '{model_id}' was permanently shut down by {info['provider']} "
+                    f"(shutdown: {info.get('shutdown_date', 'N/A')}).\n"
+                    f"  Action required: {info['guidance']}"
+                )
+        if retired_notices:
+            notice_block = "### ⚠️ Officially Retired Model Notices (Action Required):\n" + "\n".join(retired_notices)
+            if knowledge_text:
+                knowledge_text += "\n\n" + notice_block
+            else:
+                knowledge_text = notice_block
 
     # Append live package grounding from DocHunter
     if raw_libs:

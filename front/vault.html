@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApiPatch Ops Vault — Private Interceptor Radar</title>
+  <!-- Strictly Hidden from Search Engines & Public Bots -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <link rel="icon" href="/logo.jpg" type="image/jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #06080d;
+      --bg-surface: #0c1017;
+      --bg-card: rgba(16, 22, 34, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.4);
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
+        radial-gradient(circle at 100% 100%, rgba(239, 68, 68, 0.05), transparent);
+    }
+
+    /* Secret Gate Overlay */
+    #gateScreen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-base);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .gate-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px var(--primary-glow);
+    }
+
+    .gate-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid var(--primary-glow);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .gate-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .gate-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .gate-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 16px;
+      text-align: center;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+    }
+
+    .gate-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+
+    .gate-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .gate-btn:hover { opacity: 0.9; }
+
+    .gate-error {
+      color: var(--danger);
+      font-size: 12px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* Vault App UI */
+    #vaultApp {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(12px);
+      background: rgba(12, 16, 23, 0.8);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      font-weight: 600;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulseAnim 2s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .main-container {
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+      flex: 1;
+    }
+
+    .vault-hero {
+      margin-bottom: 28px;
+    }
+
+    .vault-hero h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .vault-hero p {
+      color: var(--text-muted);
+      font-size: 14px;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .metric-val {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      margin-top: 6px;
+      color: var(--text-main);
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    /* Leads Table */
+    .leads-section {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .leads-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .leads-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .leads-filter {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active, .filter-btn:hover {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .leads-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .lead-row {
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: background 0.2s;
+    }
+
+    .lead-row:last-child { border-bottom: none; }
+    .lead-row:hover { background: rgba(255, 255, 255, 0.015); }
+
+    .lead-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .repo-link {
+      color: #93c5fd;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .repo-link:hover { text-decoration: underline; }
+
+    .star-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .pr-title {
+      font-size: 14px;
+      color: var(--text-main);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .break-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .badge-critical {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .badge-ci-fail {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .code-evidence {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .code-line-del {
+      color: #f87171;
+      display: block;
+    }
+
+    .code-line-add {
+      color: #34d399;
+      display: block;
+    }
+
+    .lead-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .btn-action {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid var(--primary);
+      color: #c7d2fe;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Gate Overlay -->
+  <div id="gateScreen">
+    <div class="gate-box">
+      <div class="gate-icon">🔒</div>
+      <h2 class="gate-title">ApiPatch Private Vault</h2>
+      <p class="gate-desc">Restricted ops radar for autonomous Dependabot breaking-change telemetry. Enter passkey to decrypt.</p>
+      <input type="password" id="passkeyInput" class="gate-input" placeholder="ENTER ACCESS PIN" autofocus>
+      <button class="gate-btn" id="unlockBtn">Unlock Radar</button>
+      <div id="gateError" class="gate-error">Invalid access passkey. Access denied.</div>
+    </div>
+  </div>
+
+  <!-- Vault Application -->
+  <div id="vaultApp">
+    <header>
+      <div class="brand">
+        <span class="brand-title">ApiPatch Vault</span>
+        <span class="brand-badge">OPS RADAR</span>
+      </div>
+      <div class="header-meta">
+        <div class="status-pill">
+          <span class="pulse"></span>
+          <span>AUTONOMOUS CLOUD ACTIVE</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <div class="vault-hero">
+        <h1>Autonomous Breaking-Change Interceptor</h1>
+        <p>Real-time telemetry of live Dependabot PRs bumping AI/Backend packages across starred repositories, verified via AST semantic analysis before maintainers review.</p>
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-label">Verified Broken Leads</div>
+          <div class="metric-val" id="metricBrokenLeads">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Fatal CI Failures</div>
+          <div class="metric-val" style="color: var(--danger);" id="metricCiFails">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Cloud Daemon Radar</div>
+          <div class="metric-val" style="font-size: 15px; color: var(--success); margin-top: 14px;" id="metricLastSweep">Hourly 24/7 Active</div>
+        </div>
+      </div>
+
+      <div class="leads-section">
+        <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="font-size: 16px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #a855f7; box-shadow: 0 0 10px #a855f7;"></span>
+            Autonomous Breaking-Change Interceptor Telemetry
+          </div>
+          <div style="font-size: 12px; color: #94a3b8; font-family: var(--font-mono);">
+            Zero Synthetic Guesses • AST Code Rewrites Only
+          </div>
+        </div>
+
+        <div class="leads-list" id="leadsContainer">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      ApiPatch Autonomous Daemon • Confidential Internal Ops Radar • Not for Public Distribution
+    </footer>
+  </div>
+
+  <script>
+    // Access Passkey: Accepts default secret key "2026" or "moqbel2026" or URL query param ?key=...
+    const VALID_KEYS = ["2026", "moqbel2026", "apipatch-founder-ops"];
+
+    function checkAuth() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlKey = urlParams.get('key');
+      if (urlKey && VALID_KEYS.includes(urlKey.toLowerCase())) {
+        sessionStorage.setItem('vault_auth', 'true');
+      }
+
+      if (sessionStorage.getItem('vault_auth') === 'true') {
+        document.getElementById('gateScreen').style.display = 'none';
+        document.getElementById('vaultApp').style.display = 'flex';
+        loadVaultData();
+      }
+    }
+
+    document.getElementById('unlockBtn').addEventListener('click', () => {
+      const val = document.getElementById('passkeyInput').value.trim();
+      if (VALID_KEYS.includes(val.toLowerCase())) {
+        sessionStorage.setItem('vault_auth', 'true');
+        document.getElementById('gateScreen').style.display = 'none';
+        document.getElementById('vaultApp').style.display = 'flex';
+        loadVaultData();
+      } else {
+        document.getElementById('gateError').style.display = 'block';
+      }
+    });
+
+    document.getElementById('passkeyInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('unlockBtn').click();
+    });
+
+    let allLeads = [];
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    async function loadVaultData() {
+      try {
+        const resp = await fetch('/vault_data.json?t=' + Date.now());
+        if (!resp.ok) throw new Error('Data load failed');
+        const data = await resp.json();
+        const rawLeads = data.leads || [];
+
+        // Strictly filter to ONLY pure AST source code rewrites on actual application code files
+        allLeads = rawLeads.filter(l => {
+          if (!l.affected_files || !l.affected_files.length) return false;
+          const touchesManifest = l.affected_files.some(f => 
+            f.file.endsWith('.json') ||
+            f.file.endsWith('.toml') ||
+            f.file.endsWith('.lock') ||
+            f.file.endsWith('.yml') ||
+            f.file.endsWith('.yaml')
+          );
+          return !touchesManifest;
+        });
+
+        // Render Metrics
+        document.getElementById('metricBrokenLeads').textContent = allLeads.length;
+        document.getElementById('metricCiFails').textContent = allLeads.filter(l => l.ci_status === 'failure').length;
+        if (data.updated_at) {
+          const d = new Date(data.updated_at);
+          document.getElementById('metricLastSweep').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        renderLeads(allLeads);
+      } catch (err) {
+        console.error('Error fetching vault data:', err);
+      }
+    }
+
+    function renderLeads(leads) {
+      const container = document.getElementById('leadsContainer');
+      container.innerHTML = '';
+
+      if (!leads.length) {
+        container.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-dim);">No active verified breaking leads for this filter.</div>';
+        return;
+      }
+
+      leads.forEach(l => {
+        const row = document.createElement('div');
+        row.className = 'lead-row';
+
+        const filesHtml = (l.affected_files && l.affected_files.length) ? l.affected_files.map(f => `
+          <div class="code-evidence" style="margin-top: 10px; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div style="font-weight: 700; margin-bottom: 8px; color: #93c5fd; font-family: var(--font-mono); font-size: 13px;">📄 ${escapeHtml(f.file)}:${f.line}</div>
+            <div style="font-size: 11px; color: #f87171; margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Previous (Broken):</div>
+            <pre style="margin: 0 0 10px 0; padding: 8px 12px; background: rgba(239, 68, 68, 0.12); border-left: 3px solid #ef4444; border-radius: 4px; color: #fca5a5; font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; word-break: break-all; overflow-x: auto;">- ${escapeHtml(f.call)}</pre>
+            <div style="font-size: 11px; color: #34d399; margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Suggested (ApiPatch AST Fix):</div>
+            <pre style="margin: 0; padding: 8px 12px; background: rgba(16, 185, 129, 0.12); border-left: 3px solid #10b981; border-radius: 4px; color: #86efac; font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; word-break: break-all; overflow-x: auto;">+ ${escapeHtml(f.fix)}</pre>
+          </div>
+        `).join('') : '';
+
+        const failedChecksHtml = (l.failed_checks || []).map(c => `
+          <div style="color: #f87171; font-size: 11px; margin-top: 4px; font-family: var(--font-mono);">❌ ${escapeHtml(c)}</div>
+        `).join('');
+
+        const createdDate = l.created_at ? new Date(l.created_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'Today';
+
+        let patchTypeBadge = '';
+        if (l.patch_type === 'AST_CODE_REWRITE') {
+          patchTypeBadge = '<span style="background: rgba(168, 85, 247, 0.25); color: #d8b4fe; border: 1px solid #a855f7; box-shadow: 0 0 8px rgba(168, 85, 247, 0.3); font-size: 11px; font-family: var(--font-mono); font-weight: 800; padding: 2px 8px; border-radius: 4px;">⚡ AST SOURCE CODE REWRITE</span>';
+        } else if (l.patch_type === 'PEER_DEPENDENCY_ALIGN') {
+          patchTypeBadge = '<span style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #3b82f6; font-size: 11px; font-family: var(--font-mono); font-weight: 700; padding: 2px 7px; border-radius: 4px;">🔗 PEER DEPENDENCY ALIGN</span>';
+        } else if (l.patch_type === 'MANIFEST_PIN') {
+          patchTypeBadge = '<span style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); font-size: 11px; font-family: var(--font-mono); font-weight: 600; padding: 2px 7px; border-radius: 4px;">📌 MANIFEST PIN / ROLLBACK</span>';
+        }
+
+        row.innerHTML = `
+          <div class="lead-top">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+                <a href="${l.pr_url}" target="_blank" rel="noopener" class="repo-link">
+                  <span>${escapeHtml(l.repo)}</span>
+                </a>
+                <span class="star-badge">★ ${l.stars} Stars</span>
+                <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 11px; font-family: var(--font-mono); font-weight: 700; padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);">● OPEN PR</span>
+                ${patchTypeBadge}
+                <span style="color: var(--text-dim); font-size: 11px; font-family: var(--font-mono);">${createdDate}</span>
+              </div>
+              <div class="pr-title">#${l.pr_number}: ${escapeHtml(l.pr_title)}</div>
+            </div>
+            <div class="break-meta">
+              <span class="badge-critical">${l.break_severity || 'CRITICAL'}</span>
+              ${l.ci_status === 'failure' ? '<span class="badge-ci-fail">❌ CI FAILED</span>' : '<span style="color: #f59e0b; font-size: 11px;">⚠️ PENDING CHECK</span>'}
+              <span style="color: var(--text-dim);">${escapeHtml((l.package || '').toUpperCase())}</span>
+            </div>
+          </div>
+
+          ${failedChecksHtml ? `<div style="margin-top: 4px; margin-bottom: 6px;">${failedChecksHtml}</div>` : ''}
+
+          ${filesHtml}
+
+          <div class="lead-actions">
+            <a href="${l.pr_url}" target="_blank" rel="noopener" class="btn-action">Inspect PR on GitHub ↗</a>
+            <button class="btn-action btn-secondary" onclick="copyPatchCmd('${l.pr_url}')">Copy CLI Fix Command</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function copyPatchCmd(prUrl) {
+      const cmd = `apipatch intercept ${prUrl}`;
+      navigator.clipboard.writeText(cmd);
+      alert('Copied command to clipboard:\n' + cmd);
+    }
+
+    // Run auth check on load
+    checkAuth();
+  </script>
+</body>
+</html>

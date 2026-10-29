@@ -69,13 +69,18 @@ class MonorepoManager:
     @classmethod
     def discover_subprojects_from_paths(
         cls,
-        all_paths: List[str]
+        all_paths: List[str],
+        ignore_docs: bool = True,
+        ignore_tests: bool = True
     ) -> Dict[str, Dict[str, Any]]:
         """
         Scans a list of repository file paths (from Git tree or filesystem),
         discovers all subproject roots (directories containing a manifest),
         and returns a dictionary mapping subproject root directory -> metadata.
+        Dynamically filters out documentation and test subprojects by default.
         """
+        from apipatch.filters import is_doc_path, is_test_path, should_ignore_path
+
         subprojects: Dict[str, Dict[str, Any]] = {}
         manifest_paths: List[str] = []
 
@@ -83,11 +88,18 @@ class MonorepoManager:
             norm = cls.normalize_path(p)
             base = os.path.basename(norm).lower()
             if base in MANIFEST_FILENAMES:
+                if should_ignore_path(norm, ignore_docs=ignore_docs, ignore_tests=ignore_tests):
+                    continue
                 manifest_paths.append(norm)
 
         for m in manifest_paths:
             subproject_dir = os.path.dirname(m)
             manifest_name = os.path.basename(m).lower()
+
+            if ignore_docs and is_doc_path(subproject_dir):
+                continue
+            if ignore_tests and is_test_path(subproject_dir):
+                continue
 
             if subproject_dir not in subprojects:
                 # Name of subproject is the folder name, or 'root' for top-level
@@ -106,6 +118,9 @@ class MonorepoManager:
             norm = cls.normalize_path(p)
             base = os.path.basename(norm).lower()
             if base in MANIFEST_FILENAMES:
+                continue
+
+            if should_ignore_path(norm, ignore_docs=ignore_docs, ignore_tests=ignore_tests):
                 continue
 
             nearest_m = cls.find_nearest_manifest(norm, manifest_paths)

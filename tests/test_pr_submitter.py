@@ -257,8 +257,48 @@ class TestPRSubmitter(unittest.TestCase):
         self.assertNotIn("sub1/helper.py", inspected_files)
         self.assertNotIn("sub2/helper.py", inspected_files)
 
+    @patch.object(GitHubPRHunter, "_request")
+    def test_dynamic_ignore_docs_and_tests(self, mock_request):
+        """Verifies that docs and test files are dynamically ignored during repo audit."""
+        mock_request.side_effect = lambda ep, **kwargs: (
+            {"login": "test-user"} if ep == "/user" else
+            {"commit": {"sha": "abc12345"}} if ep.endswith("/branches/main") else
+            {}
+        )
+        hunter = GitHubPRHunter(github_token="fake_token")
+        hunter.client.get_repo_file_tree = MagicMock(return_value=[
+            {"path": "core/pyproject.toml", "type": "blob"},
+            {"path": "core/app.py", "type": "blob"},
+            {"path": "docs/package.json", "type": "blob"},
+            {"path": "docs/quickstart.md", "type": "blob"},
+            {"path": "docs/fumadocs.ts", "type": "blob"},
+            {"path": "tests/test_app.py", "type": "blob"},
+            {"path": "tests/conftest.py", "type": "blob"},
+        ])
+
+        inspected_files = []
+        def fake_fetch(repo, path, ref="main"):
+            inspected_files.append(path)
+            return "import os\n"
+
+        hunter.client.fetch_file_content = MagicMock(side_effect=fake_fetch)
+        hunter.engine.audit_code = MagicMock(return_value={"has_breaking_changes": False})
+
+        # By default, docs and tests are ignored
+        hunter.audit_and_pr_repository(
+            repo_name="org/repo",
+            dry_run=True,
+            base_branch="main"
+        )
+
+        self.assertIn("core/app.py", inspected_files)
+        self.assertNotIn("docs/fumadocs.ts", inspected_files)
+        self.assertNotIn("tests/test_app.py", inspected_files)
+        self.assertNotIn("tests/conftest.py", inspected_files)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

@@ -32,6 +32,8 @@ class CodeValidator:
         "beautifulsoup4": "bs4 (e.g. 'from bs4 import BeautifulSoup')",
         "pillow": "PIL (e.g. 'from PIL import Image')",
         "scikit_learn": "sklearn (e.g. 'import sklearn')",
+        "langchain_core.chat_models": "langchain_core.language_models.chat_models (or langchain_core.language_models)",
+        "langchain_core.llms": "langchain_core.language_models.llms (or langchain_core.language_models)",
     }
 
     @staticmethod
@@ -937,6 +939,18 @@ class CodeValidator:
             if not symbol_check.is_valid:
                 return symbol_check
 
+            internal_self_check = cls.validate_internal_self_call_integrity(original_code, refactored_code)
+            if not internal_self_check.is_valid:
+                return internal_self_check
+
+            unused_import_check = cls.validate_unused_imports(original_code, refactored_code)
+            if not unused_import_check.is_valid:
+                return unused_import_check
+
+            runtime_import_check = cls.validate_runtime_imports(refactored_code)
+            if not runtime_import_check.is_valid:
+                return runtime_import_check
+
             return ValidationResult(is_valid=True)
         else:
             return cls.validate_generic_integrity(original_code, refactored_code)
@@ -993,5 +1007,138 @@ class CodeValidator:
                 )
 
         return ValidationResult(is_valid=True)
+
+
+
+    @classmethod
+    def validate_runtime_imports(cls, refactored_code: str) -> ValidationResult:
+        """
+        Dynamically verifies third-party import paths using RuntimeInspector.
+        Eliminates hallucinated modules/submodules by inspecting actual Python packages.
+        """
+        try:
+            from apipatch.runtime_inspector import RuntimeInspector
+            errors = RuntimeInspector.verify_code_imports(refactored_code)
+            if errors:
+                return ValidationResult(
+                    is_valid=False,
+                    error_message="Runtime Import Verification Failure:\n" + "\n".join(errors)
+                )
+        except Exception:
+            pass
+        return ValidationResult(is_valid=True)
+
+    @classmethod
+    def validate_unused_imports(cls, original_code: str, refactored_code: str) -> ValidationResult:
+        """
+        Validates that newly added imports in refactored code are actually used.
+        Prevents strict CI linter failures (ruff/flake8 F401: imported but unused).
+        """
+        try:
+            tree_orig = ast.parse(original_code)
+            tree_ref = ast.parse(refactored_code)
+        except Exception:
+            return ValidationResult(is_valid=True)
+
+        orig_imported: Set[str] = set()
+        for node in ast.walk(tree_orig):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    orig_imported.add(alias.asname or alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    orig_imported.add(alias.asname or alias.name)
+
+        newly_imported: Dict[str, Tuple[Optional[str], int]] = {}
+        for node in ast.walk(tree_ref):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    sym = alias.asname or alias.name
+                    if sym not in orig_imported:
+                        newly_imported[sym] = (None, node.lineno)
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    sym = alias.asname or alias.name
+                    if sym not in orig_imported:
+                        newly_imported[sym] = (node.module, node.lineno)
+
+        if not newly_imported:
+            return ValidationResult(is_valid=True)
+
+        used_symbols: Set[str] = set()
+        for node in ast.walk(tree_ref):
+            if isinstance(node, ast.Name):
+                used_symbols.add(node.id)
+            elif isinstance(node, ast.Attribute):
+                used_symbols.add(node.attr)
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                used_symbols.add(node.value)
+
+        for sym, (mod, lineno) in newly_imported.items():
+            if sym not in used_symbols:
+                from_mod = f" from '{mod}'" if mod else ""
+                return ValidationResult(
+                    is_valid=False,
+                    error_message=(
+                        f"Unused import: Symbol '{sym}'{from_mod} was imported on line {lineno} but never referenced anywhere in the code. "
+                        f"Remove '{sym}' from the import statement to prevent strict CI linter (F401) failures."
+                    ),
+                    error_line=lineno
+                )
+
+        return ValidationResult(is_valid=True)
+
+    @classmethod
+    def validate_internal_self_call_integrity(cls, original_code: str, refactored_code: str) -> ValidationResult:
+        """
+        Guarantees that method calls on `self` or `self._*` internal properties do not have their
+        keyword argument names altered or mutated by the LLM. ApiPatch is strictly an external
+        third-party API migration tool, not an internal refactorer.
+        """
+        import ast
+
+        def _extract_self_call_kwargs(code: str) -> dict:
+            calls = {}
+            try:
+                tree = ast.parse(code)
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Call):
+                        func = node.func
+                        is_self = False
+                        if isinstance(func, ast.Attribute):
+                            # self.method()
+                            if isinstance(func.value, ast.Name) and func.value.id == "self":
+                                is_self = True
+                            # self._client.method() or self.client.method()
+                            elif isinstance(func.value, ast.Attribute) and isinstance(func.value.value, ast.Name) and func.value.value.id == "self":
+                                is_self = True
+                        if is_self:
+                            method_name = func.attr
+                            kwargs = {kw.arg for kw in node.keywords if kw.arg}
+                            calls[method_name] = kwargs
+            except Exception:
+                pass
+            return calls
+
+        orig_calls = _extract_self_call_kwargs(original_code)
+        ref_calls = _extract_self_call_kwargs(refactored_code)
+
+        for method, orig_kw in orig_calls.items():
+            if method in ref_calls:
+                ref_kw = ref_calls[method]
+                if orig_kw != ref_kw:
+                    removed = orig_kw - ref_kw
+                    added = ref_kw - orig_kw
+                    if removed or added:
+                        return ValidationResult(
+                            is_valid=False,
+                            error_message=(
+                                f"Internal call mutation detected on 'self.{method}': keyword arguments altered "
+                                f"(removed: {removed or 'none'}, added: {added or 'none'}). "
+                                f"ApiPatch only audits external third-party libraries; internal methods on 'self' must remain pristine."
+                            )
+                        )
+        return ValidationResult(is_valid=True)
+
 
 

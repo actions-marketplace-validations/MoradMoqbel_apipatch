@@ -48,6 +48,18 @@ class TestProjectContext(unittest.TestCase):
         self.assertIn("Next.js", context)
         self.assertIn("@supabase/supabase-js", context)
 
+    def test_build_context_with_ci_runtime_matrix(self):
+        wf_dir = os.path.join(self.test_dir.name, ".github", "workflows")
+        os.makedirs(wf_dir, exist_ok=True)
+        with open(os.path.join(wf_dir, "ci.yml"), "w", encoding="utf-8") as f:
+            f.write("jobs:\n  build:\n    strategy:\n      matrix:\n        python-version: ['3.11', '3.12']\n")
+
+        context = build_project_context(self.test_dir.name)
+        self.assertIn("TARGET RUNTIME & CI/CD MATRIX CONSTRAINTS", context)
+        self.assertIn("3.11, 3.12", context)
+        self.assertIn("Python <= 3.12", context)
+
 
 if __name__ == "__main__":
     unittest.main()
+

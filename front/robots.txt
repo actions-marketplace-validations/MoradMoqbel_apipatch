@@ -2,6 +2,9 @@
 
 User-agent: *
 Allow: /
+Disallow: /vault
+Disallow: /vault.html
+Disallow: /vault_data.json
 
 # Explicitly welcome AI Search, Crawlers & LLM Agents
 User-agent: GPTBot

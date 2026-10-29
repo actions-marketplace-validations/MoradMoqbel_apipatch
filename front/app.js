@@ -323,5 +323,74 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 7. Live Radar & Migration Activity Dashboard Logic
+  const dashSearchInput = document.getElementById('dash-search-input');
+  const dashFilterBtns = document.querySelectorAll('.dash-filter-btn');
+  const dashRows = document.querySelectorAll('.dash-row');
+
+  function applyDashFilters() {
+    const query = dashSearchInput ? dashSearchInput.value.toLowerCase().trim() : '';
+    const activeFilterBtn = document.querySelector('.dash-filter-btn.active');
+    const activeCategory = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'all';
+
+    dashRows.forEach(row => {
+      const rowCategory = row.getAttribute('data-category') || '';
+      const rowFramework = (row.getAttribute('data-framework') || '').toLowerCase();
+      const rowText = row.textContent.toLowerCase();
+
+      const matchesCategory = (activeCategory === 'all') || (rowCategory === activeCategory);
+      const matchesSearch = !query || rowText.includes(query) || rowFramework.includes(query);
+
+      if (matchesCategory && matchesSearch) {
+        row.style.display = 'grid';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  if (dashSearchInput) {
+    dashSearchInput.addEventListener('input', applyDashFilters);
+  }
+
+  dashFilterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      dashFilterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyDashFilters();
+    });
+  });
+
+  // Dynamic live radar stream logs
+  const terminalLog = document.getElementById('dash-terminal-log');
+  if (terminalLog) {
+    const liveStreamMessages = [
+      { tag: "RADAR", color: "log-blue", msg: "Scanning GitHub Search API for legacy 'openai.ChatCompletion.create' patterns..." },
+      { tag: "AST-ENGINE", color: "log-green", msg: "Verified AST syntax trees for SQLAlchemy 2.1 declarative models." },
+      { tag: "DOCHUNTER", color: "log-purple", msg: "Fetched LangChain v0.3 release notes: confirmed LLMChain deprecation." },
+      { tag: "SANDBOX", color: "log-cyan", msg: "Simulated isolated test run for OpenTelemetry Resource refactoring: 0 errors." },
+      { tag: "RADAR", color: "log-blue", msg: "Upstream changelog cache updated. All 14 AI SDK profiles synchronized." }
+    ];
+
+    let streamIdx = 0;
+    setInterval(() => {
+      const now = new Date();
+      const ts = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}]`;
+      const item = liveStreamMessages[streamIdx % liveStreamMessages.length];
+      streamIdx++;
+
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-ts">${ts}</span> <span class="${item.color}">[${item.tag}]</span> ${item.msg}`;
+      terminalLog.appendChild(line);
+
+      // Keep maximum 6 lines in stream
+      if (terminalLog.children.length > 6) {
+        terminalLog.removeChild(terminalLog.children[0]);
+      }
+    }, 4500);
+  }
+
 });
+
 

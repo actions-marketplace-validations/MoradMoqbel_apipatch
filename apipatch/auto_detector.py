@@ -267,11 +267,21 @@ def _extract_pyproject_dependencies(target_dir: str) -> Dict[str, str]:
 def build_project_context(target_dir: str, max_file_tree: int = 30) -> str:
     """
     Generates a concise architectural summary of the target project
-    (frameworks, declared dependency versions, top-level structure)
+    (frameworks, declared dependency versions, target runtime & CI/CD matrix constraints, top-level structure)
     to provide high-precision context for LLM migration reasoning.
     """
     target_dir = os.path.abspath(target_dir)
     context_lines: List[str] = []
+
+    # Target Runtime & CI/CD Matrix Awareness
+    try:
+        from apipatch.runtime_detector import TargetRuntimeDetector
+        runtime_ctx = TargetRuntimeDetector.detect_from_directory(target_dir)
+        prompt_block = runtime_ctx.to_prompt_context()
+        if prompt_block:
+            context_lines.append(prompt_block)
+    except Exception:
+        pass
 
     frameworks: List[str] = []
     manifest_deps: Dict[str, str] = {}

@@ -109,6 +109,29 @@ class TestMonorepoManager(unittest.TestCase):
         self.assertEqual(len(partitions["web_app"]), 1)
 
 
+    def test_discover_subprojects_ignores_docs_and_tests(self):
+        paths_with_docs = [
+            "core/pyproject.toml",
+            "core/main.py",
+            "docs/package.json",
+            "docs/index.md",
+            "tests/pyproject.toml",
+            "tests/test_main.py",
+        ]
+        # By default, docs and tests are ignored
+        subprojects = MonorepoManager.discover_subprojects_from_paths(paths_with_docs, ignore_docs=True, ignore_tests=True)
+        self.assertIn("core", subprojects)
+        self.assertNotIn("docs", subprojects)
+        self.assertNotIn("tests", subprojects)
+
+        # When include docs and tests
+        subprojects_all = MonorepoManager.discover_subprojects_from_paths(paths_with_docs, ignore_docs=False, ignore_tests=False)
+        self.assertIn("core", subprojects_all)
+        self.assertIn("docs", subprojects_all)
+        self.assertIn("tests", subprojects_all)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

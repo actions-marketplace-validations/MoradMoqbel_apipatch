@@ -204,6 +204,20 @@ DEPRECATION_RULES = [
         "before": "@app.on_event('startup')\nasync def startup(): ...",
         "after": "@asynccontextmanager\nasync def lifespan(app: FastAPI):\n    yield\napp = FastAPI(lifespan=lifespan)",
         "dev_hours": 4.0
+    },
+
+    # Python 3.12+ Standard Library Removals
+    {
+        "id": "PY-001",
+        "framework": "Python 3.12+",
+        "languages": [".py", ".pyw"],
+        "severity": "CRITICAL",
+        "name": "Removed legacy 'imp' module (PEP 451)",
+        "pattern": r"\bimport\s+imp\b|from\s+imp\s+import|\bimp\.(?:load_source|load_module|find_module|load_compiled)",
+        "description": "The 'imp' module was deprecated since Python 3.4 and completely REMOVED in Python 3.12+. Causes fatal ModuleNotFoundError at runtime. Migrate to importlib.util.",
+        "before": "import imp\nmodule = imp.load_source('mod', file_path)",
+        "after": "import importlib.util\nspec = importlib.util.spec_from_file_location('mod', file_path)\nmodule = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(module)",
+        "dev_hours": 6.0
     }
 ]
 
